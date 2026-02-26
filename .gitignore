@@ -1,0 +1,9 @@
+/target
+.tacks/
+*.db
+memory/scratch/
+memory/sessions/
+
+# Beads
+.beads/
+*.beads.db
