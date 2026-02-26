@@ -1,8 +1,7 @@
 /target
 .tacks/
 *.db
-memory/scratch/
-memory/sessions/
+memory/
 
 # Beads
 .beads/
