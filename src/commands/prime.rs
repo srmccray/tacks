@@ -31,7 +31,7 @@ pub fn run(db_path: &Path, json: bool) -> Result<(), String> {
     let db = Database::open(db_path)?;
 
     let by_status = db.task_count_by_status()?;
-    let in_progress = db.list_tasks(false, Some("in_progress"), None, None)?;
+    let in_progress = db.list_tasks(false, Some("in_progress"), None, None, None)?;
     let ready = db.get_ready_tasks(Some(READY_LIMIT))?;
 
     if json {

@@ -157,6 +157,7 @@ impl Database {
         status_filter: Option<&str>,
         priority_filter: Option<u8>,
         tag_filter: Option<&str>,
+        parent_filter: Option<&str>,
     ) -> Result<Vec<Task>, String> {
         let mut sql = String::from(
             "SELECT id, title, description, status, priority, assignee, parent_id, tags, created_at, updated_at, close_reason, notes FROM tasks WHERE 1=1",
@@ -185,6 +186,12 @@ impl Database {
                 " AND (',' || tags || ',') LIKE '%,' || ?{param_idx} || ',%'"
             ));
             param_values.push(Box::new(tag.to_string()));
+            param_idx += 1;
+        }
+
+        if let Some(parent) = parent_filter {
+            sql.push_str(&format!(" AND parent_id = ?{param_idx}"));
+            param_values.push(Box::new(parent.to_string()));
             let _ = param_idx; // suppress unused warning
         }
 
@@ -358,12 +365,25 @@ impl Database {
     }
 
     pub fn remove_dependency(&self, child_id: &str, parent_id: &str) -> Result<(), String> {
-        self.conn
+        // Verify both tasks exist
+        self.get_task(child_id)?
+            .ok_or_else(|| format!("task not found: {child_id}"))?;
+        self.get_task(parent_id)?
+            .ok_or_else(|| format!("task not found: {parent_id}"))?;
+
+        let rows = self
+            .conn
             .execute(
                 "DELETE FROM dependencies WHERE child_id = ?1 AND parent_id = ?2",
                 params![child_id, parent_id],
             )
             .map_err(|e| format!("failed to remove dependency: {e}"))?;
+
+        if rows == 0 {
+            return Err(format!(
+                "no dependency found: {child_id} is not blocked by {parent_id}"
+            ));
+        }
         Ok(())
     }
 
@@ -443,6 +463,33 @@ impl Database {
         let mut stmt = self
             .conn
             .prepare(&sql)
+            .map_err(|e| format!("query error: {e}"))?;
+
+        let rows = stmt
+            .query_map([], |row| Ok(row_to_task(row)))
+            .map_err(|e| format!("query error: {e}"))?;
+
+        let mut tasks = Vec::new();
+        for row in rows {
+            tasks.push(row.map_err(|e| format!("row error: {e}"))?);
+        }
+        Ok(tasks)
+    }
+
+    /// Get tasks that have at least one open/in_progress blocker.
+    pub fn get_blocked_tasks(&self) -> Result<Vec<Task>, String> {
+        let mut stmt = self
+            .conn
+            .prepare(
+                "SELECT DISTINCT t.id, t.title, t.description, t.status, t.priority, t.assignee,
+                    t.parent_id, t.tags, t.created_at, t.updated_at, t.close_reason, t.notes
+             FROM tasks t
+             JOIN dependencies d ON t.id = d.child_id
+             JOIN tasks blocker ON d.parent_id = blocker.id
+             WHERE t.status != 'done'
+               AND blocker.status IN ('open', 'in_progress', 'blocked')
+             ORDER BY t.priority ASC, t.created_at ASC",
+            )
             .map_err(|e| format!("query error: {e}"))?;
 
         let rows = stmt

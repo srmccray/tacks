@@ -8,7 +8,7 @@ pub fn run(db_path: &Path, json: bool) -> Result<(), String> {
     let db = Database::open(db_path)?;
 
     // Get all tasks tagged as epic
-    let epics = db.list_tasks(false, None, None, Some("epic"))?;
+    let epics = db.list_tasks(false, None, None, Some("epic"), None)?;
 
     if json {
         let mut results = Vec::new();

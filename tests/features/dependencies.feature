@@ -51,3 +51,9 @@ Feature: Dependency management
     And I show task "B" in JSON
     Then the task details include blocker "Task A"
     And the task details include dependent "Task C"
+
+  Scenario: Removing a dependency with invalid task ID fails
+    Given I have a task called "real" with title "Valid task"
+    When I try to remove a dependency so "real" is no longer blocked by "tk-0000"
+    Then the command should fail
+    And the error output contains "not found"

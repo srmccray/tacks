@@ -9,9 +9,10 @@ pub fn run(
     status: Option<&str>,
     priority: Option<u8>,
     tag: Option<&str>,
+    parent: Option<&str>,
     json: bool,
 ) -> Result<(), String> {
     let db = Database::open(db_path)?;
-    let tasks = db.list_tasks(all, status, priority, tag)?;
+    let tasks = db.list_tasks(all, status, priority, tag, parent)?;
     print_tasks(&tasks, json)
 }

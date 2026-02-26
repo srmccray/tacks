@@ -152,6 +152,22 @@ async fn i_try_to_add_dependency_invalid(
     run_tk(world, &["dep", "add", &child_id, &parent_id_literal]);
 }
 
+#[when(expr = "I try to remove a dependency so {string} is no longer blocked by {string}")]
+async fn i_try_to_remove_dependency_invalid(
+    world: &mut TacksWorld,
+    child_alias: String,
+    parent_id_literal: String,
+) {
+    // child_alias is a real task alias; parent_id_literal may be a raw invalid ID
+    let child_id = world
+        .task_ids
+        .get(&child_alias)
+        .unwrap_or_else(|| panic!("no task with alias '{child_alias}'"))
+        .clone();
+    // parent_id_literal may be "tk-0000" — used literally, not looked up as an alias
+    run_tk(world, &["dep", "remove", &child_id, &parent_id_literal]);
+}
+
 #[when(expr = "I try to add a self-dependency for {string}")]
 async fn i_try_to_add_self_dependency(world: &mut TacksWorld, alias: String) {
     let id = world

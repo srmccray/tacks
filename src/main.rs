@@ -63,6 +63,9 @@ enum Commands {
         /// Filter by tag
         #[arg(short, long)]
         tag: Option<String>,
+        /// Filter by parent task ID
+        #[arg(long)]
+        parent: Option<String>,
     },
     /// Show tasks that are ready to work on (no open blockers)
     Ready {
@@ -148,6 +151,8 @@ enum Commands {
         /// Comment text
         body: String,
     },
+    /// Show blocked tasks (tasks with open blockers)
+    Blocked,
 }
 
 #[derive(Subcommand)]
@@ -200,12 +205,14 @@ fn main() {
             status,
             priority,
             tag,
+            parent,
         } => commands::list::run(
             &db_path,
             all,
             status.as_deref(),
             priority,
             tag.as_deref(),
+            parent.as_deref(),
             cli.json,
         ),
         Commands::Ready { limit } => commands::ready::run(&db_path, limit, cli.json),
@@ -257,6 +264,7 @@ fn main() {
             DepAction::Remove { child, parent } => commands::dep::remove(&db_path, &child, &parent),
         },
         Commands::Comment { id, body } => commands::comment::run(&db_path, &id, &body, cli.json),
+        Commands::Blocked => commands::blocked::run(&db_path, cli.json),
     };
 
     if let Err(e) = result {
