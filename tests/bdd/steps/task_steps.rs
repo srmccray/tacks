@@ -197,3 +197,43 @@ async fn the_task_details_show_priority(world: &mut TacksWorld, expected_priorit
         expected_priority, actual
     );
 }
+
+// ---------------------------------------------------------------------------
+// When steps — close with reason
+// ---------------------------------------------------------------------------
+
+#[when(expr = "I close task {string} with reason {string}")]
+async fn i_close_task_with_reason(world: &mut TacksWorld, alias: String, reason: String) {
+    let id = world
+        .task_ids
+        .get(&alias)
+        .unwrap_or_else(|| panic!("no task with alias '{alias}'"))
+        .clone();
+    run_tk(world, &["close", &id, "--reason", &reason]);
+}
+
+#[when(expr = "I try to close task {string} with reason {string}")]
+async fn i_try_to_close_task_with_reason(world: &mut TacksWorld, alias: String, reason: String) {
+    let id = world
+        .task_ids
+        .get(&alias)
+        .unwrap_or_else(|| panic!("no task with alias '{alias}'"))
+        .clone();
+    run_tk(world, &["close", &id, "--reason", &reason]);
+}
+
+// ---------------------------------------------------------------------------
+// Then steps — close reason
+// ---------------------------------------------------------------------------
+
+#[then(expr = "the task details show close_reason {string}")]
+async fn the_task_details_show_close_reason(world: &mut TacksWorld, expected: String) {
+    let json: Value =
+        serde_json::from_str(&world.last_stdout).expect("last output is not valid JSON");
+    let actual = json["close_reason"].as_str().unwrap_or("null");
+    assert_eq!(
+        actual, expected,
+        "expected close_reason '{}' but got '{}'",
+        expected, actual
+    );
+}

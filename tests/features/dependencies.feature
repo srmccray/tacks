@@ -34,3 +34,20 @@ Feature: Dependency management
     Given I have a task called "self" with title "Self referencing task"
     When I try to add a self-dependency for "self"
     Then the command should fail
+
+  Scenario: Show command displays dependents
+    Given I have a task called "parent" with title "Core library"
+    And I have a task called "child" with title "Uses core library"
+    When I add a dependency so "child" is blocked by "parent"
+    And I show task "parent" in JSON
+    Then the task details include dependent "Uses core library"
+
+  Scenario: Show command displays both blockers and dependents
+    Given I have a task called "A" with title "Task A"
+    And I have a task called "B" with title "Task B"
+    And I have a task called "C" with title "Task C"
+    When I add a dependency so "B" is blocked by "A"
+    And I add a dependency so "C" is blocked by "B"
+    And I show task "B" in JSON
+    Then the task details include blocker "Task A"
+    And the task details include dependent "Task C"

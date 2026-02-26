@@ -163,6 +163,58 @@ async fn i_try_to_add_self_dependency(world: &mut TacksWorld, alias: String) {
 }
 
 // ---------------------------------------------------------------------------
+// When steps — show
+// ---------------------------------------------------------------------------
+
+#[when(expr = "I show task {string} in JSON")]
+async fn i_show_task_in_json(world: &mut TacksWorld, alias: String) {
+    let id = world
+        .task_ids
+        .get(&alias)
+        .unwrap_or_else(|| panic!("no task with alias '{alias}'"))
+        .clone();
+    run_tk(world, &["--json", "show", &id]);
+}
+
+// ---------------------------------------------------------------------------
+// Then steps — show dependents/blockers
+// ---------------------------------------------------------------------------
+
+#[then(expr = "the task details include dependent {string}")]
+async fn the_task_details_include_dependent(world: &mut TacksWorld, expected_title: String) {
+    let json: Value =
+        serde_json::from_str(&world.last_stdout).expect("last output is not valid JSON");
+    let dependents = json["dependents"]
+        .as_array()
+        .expect("no 'dependents' array in show output");
+    let found = dependents
+        .iter()
+        .any(|d| d["title"].as_str().unwrap_or("") == expected_title);
+    assert!(
+        found,
+        "expected dependent '{}' not found in: {:?}",
+        expected_title, dependents
+    );
+}
+
+#[then(expr = "the task details include blocker {string}")]
+async fn the_task_details_include_blocker(world: &mut TacksWorld, expected_title: String) {
+    let json: Value =
+        serde_json::from_str(&world.last_stdout).expect("last output is not valid JSON");
+    let blockers = json["blockers"]
+        .as_array()
+        .expect("no 'blockers' array in show output");
+    let found = blockers
+        .iter()
+        .any(|b| b["title"].as_str().unwrap_or("") == expected_title);
+    assert!(
+        found,
+        "expected blocker '{}' not found in: {:?}",
+        expected_title, blockers
+    );
+}
+
+// ---------------------------------------------------------------------------
 // Then steps — ready list
 // ---------------------------------------------------------------------------
 

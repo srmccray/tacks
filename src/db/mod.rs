@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use rusqlite::{Connection, params};
 use std::path::Path;
 
-use crate::models::{Comment, Dependency, Status, Task};
+use crate::models::{Comment, Dependency, Status, Task, validate_close_reason};
 
 pub struct Database {
     conn: Connection,
@@ -110,8 +110,8 @@ impl Database {
         let tags_str = task.tags.join(",");
         self.conn
             .execute(
-                "INSERT INTO tasks (id, title, description, status, priority, assignee, parent_id, tags, created_at, updated_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+                "INSERT INTO tasks (id, title, description, status, priority, assignee, parent_id, tags, created_at, updated_at, close_reason)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
                 params![
                     task.id,
                     task.title,
@@ -123,6 +123,7 @@ impl Database {
                     tags_str,
                     task.created_at.to_rfc3339(),
                     task.updated_at.to_rfc3339(),
+                    task.close_reason,
                 ],
             )
             .map_err(|e| format!("failed to insert task: {e}"))?;
@@ -133,7 +134,7 @@ impl Database {
         let mut stmt = self
             .conn
             .prepare(
-                "SELECT id, title, description, status, priority, assignee, parent_id, tags, created_at, updated_at
+                "SELECT id, title, description, status, priority, assignee, parent_id, tags, created_at, updated_at, close_reason
                  FROM tasks WHERE id = ?1",
             )
             .map_err(|e| format!("query error: {e}"))?;
@@ -157,7 +158,7 @@ impl Database {
         tag_filter: Option<&str>,
     ) -> Result<Vec<Task>, String> {
         let mut sql = String::from(
-            "SELECT id, title, description, status, priority, assignee, parent_id, tags, created_at, updated_at FROM tasks WHERE 1=1",
+            "SELECT id, title, description, status, priority, assignee, parent_id, tags, created_at, updated_at, close_reason FROM tasks WHERE 1=1",
         );
         let mut param_values: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
         let mut param_idx = 1;
@@ -207,6 +208,7 @@ impl Database {
         Ok(tasks)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn update_task(
         &self,
         id: &str,
@@ -215,6 +217,7 @@ impl Database {
         status: Option<&str>,
         description: Option<&str>,
         assignee: Option<&str>,
+        close_reason: Option<&str>,
     ) -> Result<(), String> {
         let mut sets = Vec::new();
         let mut param_values: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
@@ -247,6 +250,12 @@ impl Database {
             param_values.push(Box::new(a.to_string()));
             idx += 1;
         }
+        if let Some(r) = close_reason {
+            validate_close_reason(r)?;
+            sets.push(format!("close_reason = ?{idx}"));
+            param_values.push(Box::new(r.to_string()));
+            idx += 1;
+        }
 
         if sets.is_empty() {
             return Ok(());
@@ -272,6 +281,11 @@ impl Database {
             return Err(format!("task not found: {id}"));
         }
         Ok(())
+    }
+
+    /// Close a task: set status to done and record the close_reason.
+    pub fn close_task(&self, id: &str, reason: Option<&str>) -> Result<(), String> {
+        self.update_task(id, None, None, Some("done"), None, None, reason)
     }
 
     pub fn update_tags(&self, id: &str, tags: &[String]) -> Result<(), String> {
@@ -373,13 +387,12 @@ impl Database {
     /// Returns every task whose work cannot proceed until `task_id` is resolved.
     /// This is the "dependents" direction: `task_id` is the blocker, and the
     /// returned tasks are the ones waiting on it.
-    #[allow(dead_code)]
     pub fn get_dependents(&self, task_id: &str) -> Result<Vec<Task>, String> {
         let mut stmt = self
             .conn
             .prepare(
                 "SELECT t.id, t.title, t.description, t.status, t.priority, t.assignee,
-                        t.parent_id, t.tags, t.created_at, t.updated_at
+                        t.parent_id, t.tags, t.created_at, t.updated_at, t.close_reason
                  FROM tasks t
                  JOIN dependencies d ON t.id = d.child_id
                  WHERE d.parent_id = ?1
@@ -403,7 +416,7 @@ impl Database {
     pub fn get_ready_tasks(&self, limit: Option<u32>) -> Result<Vec<Task>, String> {
         let mut sql = String::from(
             "
-            SELECT t.id, t.title, t.description, t.status, t.priority, t.assignee, t.parent_id, t.tags, t.created_at, t.updated_at
+            SELECT t.id, t.title, t.description, t.status, t.priority, t.assignee, t.parent_id, t.tags, t.created_at, t.updated_at, t.close_reason
             FROM tasks t
             WHERE t.status = 'open'
               AND NOT EXISTS (
@@ -585,7 +598,7 @@ impl Database {
         let mut stmt = self
             .conn
             .prepare(
-                "SELECT id, title, description, status, priority, assignee, parent_id, tags, created_at, updated_at
+                "SELECT id, title, description, status, priority, assignee, parent_id, tags, created_at, updated_at, close_reason
                  FROM tasks WHERE parent_id = ?1 ORDER BY id ASC",
             )
             .map_err(|e| format!("query error: {e}"))?;
@@ -620,7 +633,6 @@ fn get_schema_version(conn: &Connection) -> Result<i32, String> {
 }
 
 /// Persist the schema version to the config table.
-#[allow(dead_code)]
 fn set_schema_version(conn: &Connection, version: i32) -> Result<(), String> {
     conn.execute(
         "INSERT OR REPLACE INTO config (key, value) VALUES ('schema_version', ?1)",
@@ -641,18 +653,17 @@ fn run_migrations(conn: &Connection) -> Result<(), String> {
     let version = get_schema_version(conn)?;
 
     // v0 is the baseline -- no ALTER TABLE statements needed.
-    // Future migrations follow this pattern:
-    //
-    // if version < 1 {
-    //     conn.execute_batch(
-    //         "BEGIN;
-    //          ALTER TABLE tasks ADD COLUMN close_reason TEXT;
-    //          COMMIT;",
-    //     )
-    //     .map_err(|e| format!("migration v1 failed: {e}"))?;
-    //     set_schema_version(conn, 1)?;
-    // }
-    //
+
+    if version < 1 {
+        conn.execute_batch(
+            "BEGIN;
+             ALTER TABLE tasks ADD COLUMN close_reason TEXT;
+             COMMIT;",
+        )
+        .map_err(|e| format!("migration v1 failed: {e}"))?;
+        set_schema_version(conn, 1)?;
+    }
+
     // if version < 2 {
     //     conn.execute_batch(
     //         "BEGIN;
@@ -662,9 +673,6 @@ fn run_migrations(conn: &Connection) -> Result<(), String> {
     //     .map_err(|e| format!("migration v2 failed: {e}"))?;
     //     set_schema_version(conn, 2)?;
     // }
-
-    // Suppress unused-variable lint while no active migrations exist.
-    let _ = version;
 
     Ok(())
 }
@@ -720,6 +728,7 @@ fn row_to_task(row: &rusqlite::Row) -> Task {
     let tags_str: String = row.get(7).unwrap_or_default();
     let created_str: String = row.get(8).unwrap_or_default();
     let updated_str: String = row.get(9).unwrap_or_default();
+    let close_reason: Option<String> = row.get(10).unwrap_or(None);
 
     Task {
         id: row.get(0).unwrap_or_default(),
@@ -746,5 +755,6 @@ fn row_to_task(row: &rusqlite::Row) -> Task {
         updated_at: DateTime::parse_from_rfc3339(&updated_str)
             .map(|dt| dt.with_timezone(&Utc))
             .unwrap_or_else(|_| Utc::now()),
+        close_reason,
     }
 }

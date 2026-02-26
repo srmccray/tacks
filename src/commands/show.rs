@@ -11,10 +11,15 @@ pub fn run(db_path: &Path, id: &str, json: bool) -> Result<(), String> {
 
     if json {
         let mut value = serde_json::to_value(&task).map_err(|e| format!("json error: {e}"))?;
-        // Add comments and blockers to JSON output
+        // Add comments, blockers, children, and dependents to JSON output
         let comments = db.get_comments(id)?;
-        let blockers = db.get_blockers(id)?;
+        let blocker_deps = db.get_blockers(id)?;
+        let blocker_tasks: Vec<_> = blocker_deps
+            .iter()
+            .filter_map(|d| db.get_task(&d.parent_id).ok().flatten())
+            .collect();
         let children = db.get_children(id)?;
+        let dependents = db.get_dependents(id)?;
         if let Some(obj) = value.as_object_mut() {
             obj.insert(
                 "comments".to_string(),
@@ -22,11 +27,15 @@ pub fn run(db_path: &Path, id: &str, json: bool) -> Result<(), String> {
             );
             obj.insert(
                 "blockers".to_string(),
-                serde_json::to_value(&blockers).unwrap_or_default(),
+                serde_json::to_value(&blocker_tasks).unwrap_or_default(),
             );
             obj.insert(
                 "children".to_string(),
                 serde_json::to_value(&children).unwrap_or_default(),
+            );
+            obj.insert(
+                "dependents".to_string(),
+                serde_json::to_value(&dependents).unwrap_or_default(),
             );
         }
         let j = serde_json::to_string_pretty(&value).map_err(|e| format!("json error: {e}"))?;
@@ -38,6 +47,9 @@ pub fn run(db_path: &Path, id: &str, json: bool) -> Result<(), String> {
     println!("ID:          {}", task.id);
     println!("Title:       {}", task.title);
     println!("Status:      {}", format_status(&task.status));
+    if let Some(ref reason) = task.close_reason {
+        println!("Reason:      {reason}");
+    }
     println!("Priority:    {}", format_priority(task.priority));
     if let Some(ref desc) = task.description {
         println!("Description: {desc}");
@@ -67,6 +79,20 @@ pub fn run(db_path: &Path, id: &str, json: bool) -> Result<(), String> {
                     blocker_task.title
                 );
             }
+        }
+    }
+
+    // Show dependents
+    let dependents = db.get_dependents(id)?;
+    if !dependents.is_empty() {
+        println!("\nDependents:");
+        for dep in &dependents {
+            println!(
+                "  - {} [{}] {}",
+                dep.id,
+                format_status(&dep.status),
+                dep.title
+            );
         }
     }
 

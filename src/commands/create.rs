@@ -46,9 +46,19 @@ pub fn run(
         tags: tag_list,
         created_at: now,
         updated_at: now,
+        close_reason: None,
     };
 
     db.insert_task(&task)?;
+
+    // Auto-tag parent as epic when a child is created
+    if let Some(parent_id) = parent {
+        let mut parent_tags = db.get_task_tags(parent_id)?;
+        if !parent_tags.contains(&"epic".to_string()) {
+            parent_tags.push("epic".to_string());
+            db.update_tags(parent_id, &parent_tags)?;
+        }
+    }
 
     if json {
         let j = serde_json::to_string_pretty(&task).map_err(|e| format!("json error: {e}"))?;

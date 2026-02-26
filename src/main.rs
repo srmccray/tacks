@@ -119,6 +119,9 @@ enum Commands {
         /// Closing comment
         #[arg(short, long)]
         comment: Option<String>,
+        /// Close reason (done, duplicate, absorbed, stale, superseded)
+        #[arg(short, long, default_value = "done")]
+        reason: String,
     },
     /// Add a dependency between tasks
     Dep {
@@ -219,9 +222,11 @@ fn main() {
             remove_tags.as_deref(),
             cli.json,
         ),
-        Commands::Close { id, comment } => {
-            commands::close::run(&db_path, &id, comment.as_deref(), cli.json)
-        }
+        Commands::Close {
+            id,
+            comment,
+            reason,
+        } => commands::close::run(&db_path, &id, comment.as_deref(), Some(&reason), cli.json),
         Commands::Dep { action } => match action {
             DepAction::Add { child, parent } => commands::dep::add(&db_path, &child, &parent),
             DepAction::Remove { child, parent } => commands::dep::remove(&db_path, &child, &parent),

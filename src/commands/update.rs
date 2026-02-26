@@ -34,6 +34,7 @@ pub fn run(
         effective_status,
         description,
         effective_assignee,
+        None,
     )?;
 
     // Handle tag changes

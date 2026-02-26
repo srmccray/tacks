@@ -2,6 +2,21 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
+/// Valid close reasons for a task.
+pub const VALID_CLOSE_REASONS: &[&str] = &["done", "duplicate", "absorbed", "stale", "superseded"];
+
+/// Validate a close reason string.
+pub fn validate_close_reason(reason: &str) -> Result<(), String> {
+    if VALID_CLOSE_REASONS.contains(&reason) {
+        Ok(())
+    } else {
+        Err(format!(
+            "invalid close reason: {reason}. valid reasons: {}",
+            VALID_CLOSE_REASONS.join(", ")
+        ))
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Status {
@@ -50,6 +65,7 @@ pub struct Task {
     pub tags: Vec<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub close_reason: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

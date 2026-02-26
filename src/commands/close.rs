@@ -1,11 +1,24 @@
 use std::path::Path;
 
 use crate::db::Database;
+use crate::models::validate_close_reason;
 
-pub fn run(db_path: &Path, id: &str, comment: Option<&str>, json: bool) -> Result<(), String> {
+/// Close a task, optionally recording a comment and close reason.
+pub fn run(
+    db_path: &Path,
+    id: &str,
+    comment: Option<&str>,
+    reason: Option<&str>,
+    json: bool,
+) -> Result<(), String> {
     let db = Database::open(db_path)?;
 
-    db.update_task(id, None, None, Some("done"), None, None)?;
+    // Validate reason before touching the DB.
+    if let Some(r) = reason {
+        validate_close_reason(r)?;
+    }
+
+    db.close_task(id, reason)?;
 
     if let Some(body) = comment {
         db.add_comment(id, body)?;
