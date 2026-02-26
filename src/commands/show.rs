@@ -54,6 +54,9 @@ pub fn run(db_path: &Path, id: &str, json: bool) -> Result<(), String> {
     if let Some(ref desc) = task.description {
         println!("Description: {desc}");
     }
+    if let Some(ref notes) = task.notes {
+        println!("Notes:       {notes}");
+    }
     if let Some(ref assignee) = task.assignee {
         println!("Assignee:    {assignee}");
     }

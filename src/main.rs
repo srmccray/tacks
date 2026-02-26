@@ -111,6 +111,9 @@ enum Commands {
         /// Tags to remove (comma-separated)
         #[arg(long)]
         remove_tags: Option<String>,
+        /// Working notes (overwrites previous value)
+        #[arg(long)]
+        notes: Option<String>,
     },
     /// Close a task
     Close {
@@ -122,7 +125,17 @@ enum Commands {
         /// Close reason (done, duplicate, absorbed, stale, superseded)
         #[arg(short, long, default_value = "done")]
         reason: String,
+        /// Force close even if open dependents exist
+        #[arg(long)]
+        force: bool,
     },
+    /// List child tasks of a parent
+    Children {
+        /// Parent task ID
+        id: String,
+    },
+    /// Show epic progress (tasks tagged as epic with child completion stats)
+    Epic,
     /// Add a dependency between tasks
     Dep {
         #[command(subcommand)]
@@ -209,6 +222,7 @@ fn main() {
             assignee,
             add_tags,
             remove_tags,
+            notes,
         } => commands::update::run(
             &db_path,
             &id,
@@ -220,13 +234,24 @@ fn main() {
             assignee.as_deref(),
             add_tags.as_deref(),
             remove_tags.as_deref(),
+            notes.as_deref(),
             cli.json,
         ),
         Commands::Close {
             id,
             comment,
             reason,
-        } => commands::close::run(&db_path, &id, comment.as_deref(), Some(&reason), cli.json),
+            force,
+        } => commands::close::run(
+            &db_path,
+            &id,
+            comment.as_deref(),
+            Some(&reason),
+            force,
+            cli.json,
+        ),
+        Commands::Children { id } => commands::children::run(&db_path, &id, cli.json),
+        Commands::Epic => commands::epic::run(&db_path, cli.json),
         Commands::Dep { action } => match action {
             DepAction::Add { child, parent } => commands::dep::add(&db_path, &child, &parent),
             DepAction::Remove { child, parent } => commands::dep::remove(&db_path, &child, &parent),

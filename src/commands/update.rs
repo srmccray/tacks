@@ -14,6 +14,7 @@ pub fn run(
     assignee: Option<&str>,
     add_tags: Option<&str>,
     remove_tags: Option<&str>,
+    notes: Option<&str>,
     json: bool,
 ) -> Result<(), String> {
     let db = Database::open(db_path)?;
@@ -35,6 +36,7 @@ pub fn run(
         description,
         effective_assignee,
         None,
+        notes,
     )?;
 
     // Handle tag changes

@@ -47,6 +47,7 @@ pub fn run(
         created_at: now,
         updated_at: now,
         close_reason: None,
+        notes: None,
     };
 
     db.insert_task(&task)?;

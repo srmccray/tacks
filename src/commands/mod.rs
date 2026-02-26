@@ -1,7 +1,9 @@
+pub mod children;
 pub mod close;
 pub mod comment;
 pub mod create;
 pub mod dep;
+pub mod epic;
 pub mod init;
 pub mod list;
 pub mod prime;

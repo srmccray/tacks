@@ -110,8 +110,8 @@ impl Database {
         let tags_str = task.tags.join(",");
         self.conn
             .execute(
-                "INSERT INTO tasks (id, title, description, status, priority, assignee, parent_id, tags, created_at, updated_at, close_reason)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+                "INSERT INTO tasks (id, title, description, status, priority, assignee, parent_id, tags, created_at, updated_at, close_reason, notes)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
                 params![
                     task.id,
                     task.title,
@@ -124,6 +124,7 @@ impl Database {
                     task.created_at.to_rfc3339(),
                     task.updated_at.to_rfc3339(),
                     task.close_reason,
+                    task.notes,
                 ],
             )
             .map_err(|e| format!("failed to insert task: {e}"))?;
@@ -134,7 +135,7 @@ impl Database {
         let mut stmt = self
             .conn
             .prepare(
-                "SELECT id, title, description, status, priority, assignee, parent_id, tags, created_at, updated_at, close_reason
+                "SELECT id, title, description, status, priority, assignee, parent_id, tags, created_at, updated_at, close_reason, notes
                  FROM tasks WHERE id = ?1",
             )
             .map_err(|e| format!("query error: {e}"))?;
@@ -158,7 +159,7 @@ impl Database {
         tag_filter: Option<&str>,
     ) -> Result<Vec<Task>, String> {
         let mut sql = String::from(
-            "SELECT id, title, description, status, priority, assignee, parent_id, tags, created_at, updated_at, close_reason FROM tasks WHERE 1=1",
+            "SELECT id, title, description, status, priority, assignee, parent_id, tags, created_at, updated_at, close_reason, notes FROM tasks WHERE 1=1",
         );
         let mut param_values: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
         let mut param_idx = 1;
@@ -218,6 +219,7 @@ impl Database {
         description: Option<&str>,
         assignee: Option<&str>,
         close_reason: Option<&str>,
+        notes: Option<&str>,
     ) -> Result<(), String> {
         let mut sets = Vec::new();
         let mut param_values: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
@@ -256,6 +258,11 @@ impl Database {
             param_values.push(Box::new(r.to_string()));
             idx += 1;
         }
+        if let Some(n) = notes {
+            sets.push(format!("notes = ?{idx}"));
+            param_values.push(Box::new(n.to_string()));
+            idx += 1;
+        }
 
         if sets.is_empty() {
             return Ok(());
@@ -285,7 +292,7 @@ impl Database {
 
     /// Close a task: set status to done and record the close_reason.
     pub fn close_task(&self, id: &str, reason: Option<&str>) -> Result<(), String> {
-        self.update_task(id, None, None, Some("done"), None, None, reason)
+        self.update_task(id, None, None, Some("done"), None, None, reason, None)
     }
 
     pub fn update_tags(&self, id: &str, tags: &[String]) -> Result<(), String> {
@@ -392,7 +399,7 @@ impl Database {
             .conn
             .prepare(
                 "SELECT t.id, t.title, t.description, t.status, t.priority, t.assignee,
-                        t.parent_id, t.tags, t.created_at, t.updated_at, t.close_reason
+                        t.parent_id, t.tags, t.created_at, t.updated_at, t.close_reason, t.notes
                  FROM tasks t
                  JOIN dependencies d ON t.id = d.child_id
                  WHERE d.parent_id = ?1
@@ -416,7 +423,7 @@ impl Database {
     pub fn get_ready_tasks(&self, limit: Option<u32>) -> Result<Vec<Task>, String> {
         let mut sql = String::from(
             "
-            SELECT t.id, t.title, t.description, t.status, t.priority, t.assignee, t.parent_id, t.tags, t.created_at, t.updated_at, t.close_reason
+            SELECT t.id, t.title, t.description, t.status, t.priority, t.assignee, t.parent_id, t.tags, t.created_at, t.updated_at, t.close_reason, t.notes
             FROM tasks t
             WHERE t.status = 'open'
               AND NOT EXISTS (
@@ -598,7 +605,7 @@ impl Database {
         let mut stmt = self
             .conn
             .prepare(
-                "SELECT id, title, description, status, priority, assignee, parent_id, tags, created_at, updated_at, close_reason
+                "SELECT id, title, description, status, priority, assignee, parent_id, tags, created_at, updated_at, close_reason, notes
                  FROM tasks WHERE parent_id = ?1 ORDER BY id ASC",
             )
             .map_err(|e| format!("query error: {e}"))?;
@@ -664,15 +671,15 @@ fn run_migrations(conn: &Connection) -> Result<(), String> {
         set_schema_version(conn, 1)?;
     }
 
-    // if version < 2 {
-    //     conn.execute_batch(
-    //         "BEGIN;
-    //          ALTER TABLE tasks ADD COLUMN notes TEXT;
-    //          COMMIT;",
-    //     )
-    //     .map_err(|e| format!("migration v2 failed: {e}"))?;
-    //     set_schema_version(conn, 2)?;
-    // }
+    if version < 2 {
+        conn.execute_batch(
+            "BEGIN;
+             ALTER TABLE tasks ADD COLUMN notes TEXT;
+             COMMIT;",
+        )
+        .map_err(|e| format!("migration v2 failed: {e}"))?;
+        set_schema_version(conn, 2)?;
+    }
 
     Ok(())
 }
@@ -729,6 +736,7 @@ fn row_to_task(row: &rusqlite::Row) -> Task {
     let created_str: String = row.get(8).unwrap_or_default();
     let updated_str: String = row.get(9).unwrap_or_default();
     let close_reason: Option<String> = row.get(10).unwrap_or(None);
+    let notes: Option<String> = row.get(11).unwrap_or(None);
 
     Task {
         id: row.get(0).unwrap_or_default(),
@@ -756,5 +764,6 @@ fn row_to_task(row: &rusqlite::Row) -> Task {
             .map(|dt| dt.with_timezone(&Utc))
             .unwrap_or_else(|_| Utc::now()),
         close_reason,
+        notes,
     }
 }
