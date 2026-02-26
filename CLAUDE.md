@@ -16,26 +16,31 @@ Lightweight task manager for AI coding agents. A local-only alternative to [bead
 ```
 src/
   main.rs           # CLI definition (clap derive) and dispatch
-  models/mod.rs     # Data types: Task, Comment, Dependency, Status
+  models/mod.rs     # Data types: Task, Comment, Dependency, Status, CloseReason
   db/mod.rs         # SQLite database layer (open, migrate, CRUD, cycle detection)
   commands/         # One file per subcommand
     init.rs         # tk init [--prefix]
     create.rs       # tk create <title> [-p priority] [-d desc] [-t tags] [--parent id]
-    list.rs         # tk list [-a] [-s status] [-p pri] [-t tag]
+    list.rs         # tk list [-a] [-s status] [-p pri] [-t tag] [--parent id]
     ready.rs        # tk ready [--limit N]
-    show.rs         # tk show <id>
-    update.rs       # tk update <id> [fields...] [--claim]
-    close.rs        # tk close <id> [-c comment]
+    show.rs         # tk show <id> (includes blockers, dependents, notes, close_reason)
+    update.rs       # tk update <id> [fields...] [--claim] [--notes text]
+    close.rs        # tk close <id> [-c comment] [-r reason] [--force]
     dep.rs          # tk dep add|remove <child> <parent>
     comment.rs      # tk comment <id> <body>
     stats.rs        # tk stats [--oneline] [--json]
     prime.rs        # tk prime [--json] (AI context output)
+    children.rs     # tk children <id> (list subtasks)
+    epic.rs         # tk epic (show epic progress)
+    blocked.rs      # tk blocked (tasks blocked by open deps)
 tests/
   features/         # Gherkin .feature files (BDD specs + agent-readable docs)
-    task_lifecycle.feature
-    dependencies.feature
-    agent_commands.feature
-    filtering.feature
+    task_lifecycle.feature    dependencies.feature
+    agent_commands.feature    filtering.feature
+    close_reason.feature      close_guard.feature
+    epic_tagging.feature      notes.feature
+    children.feature          epic_status.feature
+    blocked.feature           parent_filter.feature
   bdd/
     main.rs         # cucumber-rs harness (World struct, runner)
     steps/          # Step definitions (shell out to tk binary via assert_cmd)
@@ -60,7 +65,7 @@ tests/
 ```bash
 cargo build              # Debug build
 cargo build --release    # Release build
-cargo test --test bdd    # Run BDD scenarios (22 scenarios, 121 steps)
+cargo test --test bdd    # Run BDD scenarios (49 scenarios, 274 steps)
 cargo clippy             # Lint
 cargo fmt --check        # Format check
 ```
@@ -73,13 +78,20 @@ tk create "Title" -p 1            # Create P1 task
 tk create "Sub" --parent <id>     # Create subtask (auto-tags parent as epic)
 tk list                           # Show open tasks
 tk list -s done -t backend        # Filter by status, tag
+tk list --parent <id>             # Show only children of a task
 tk ready                          # Tasks with no blockers
 tk ready --limit 1                # Next task for agent to pick
-tk show <id>                      # Task details
+tk show <id>                      # Task details + blockers + dependents
 tk update <id> --claim            # Claim task (in_progress + assignee)
+tk update <id> --notes "context"  # Set working notes (overwrites)
 tk close <id> -c "Done"           # Close with comment
+tk close <id> -r duplicate        # Close with reason (done/duplicate/absorbed/stale/superseded)
+tk close <id> --force             # Close even with open subtasks
 tk dep add <child> <parent>       # Add blocker (cycle-checked)
 tk comment <id> "message"         # Add comment
+tk children <id>                  # List subtasks of a task
+tk epic                           # Show epic progress (completion stats)
+tk blocked                        # List tasks blocked by open deps
 tk stats                          # Backlog overview (status/priority/tag counts)
 tk stats --oneline                # Compact: "3 open, 2 in_progress, 5 done"
 tk prime                          # AI context: stats + in-progress + ready queue
