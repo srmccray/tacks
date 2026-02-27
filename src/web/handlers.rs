@@ -1,6 +1,14 @@
 use askama::Template;
+use axum::Json;
+use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
+use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value};
+
+use crate::models::{Comment, Task, validate_close_reason};
+use crate::web::AppState;
+use crate::web::errors::AppError;
 
 /// Template for the index/home page.
 #[derive(Template)]
@@ -22,4 +30,461 @@ fn render_template<T: Template>(template: T) -> Response {
 /// Index page handler — renders the home template.
 pub async fn index() -> Response {
     render_template(IndexTemplate)
+}
+
+// ---------------------------------------------------------------------------
+// Request body types
+// ---------------------------------------------------------------------------
+
+/// Request body for POST /api/tasks.
+#[derive(Debug, Deserialize)]
+pub struct CreateTaskBody {
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub priority: Option<u8>,
+    pub tags: Option<Vec<String>>,
+    pub parent_id: Option<String>,
+}
+
+/// Request body for PATCH /api/tasks/:id.
+#[derive(Debug, Deserialize)]
+pub struct UpdateTaskBody {
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub status: Option<String>,
+    pub priority: Option<u8>,
+    pub assignee: Option<String>,
+    pub tags: Option<Vec<String>>,
+    pub notes: Option<String>,
+}
+
+/// Request body for POST /api/tasks/:id/close.
+#[derive(Debug, Deserialize)]
+pub struct CloseTaskBody {
+    pub reason: Option<String>,
+    pub comment: Option<String>,
+}
+
+/// Request body for POST /api/tasks/:id/deps.
+#[derive(Debug, Deserialize)]
+pub struct AddDepBody {
+    pub parent_id: String,
+}
+
+/// Request body for POST /api/tasks/:id/comments.
+#[derive(Debug, Deserialize)]
+pub struct AddCommentBody {
+    pub body: String,
+}
+
+// ---------------------------------------------------------------------------
+// Query parameter types
+// ---------------------------------------------------------------------------
+
+/// Query parameters for GET /api/tasks.
+#[derive(Debug, Deserialize)]
+pub struct ListTasksQuery {
+    pub status: Option<String>,
+    pub priority: Option<u8>,
+    pub tag: Option<String>,
+    pub all: Option<bool>,
+    pub parent: Option<String>,
+}
+
+/// Query parameters for GET /api/tasks/ready.
+#[derive(Debug, Deserialize)]
+pub struct ReadyTasksQuery {
+    pub limit: Option<u32>,
+}
+
+// ---------------------------------------------------------------------------
+// Stats response type
+// ---------------------------------------------------------------------------
+
+/// Response body for GET /api/stats.
+#[derive(Debug, Serialize)]
+pub struct StatsResponse {
+    pub by_status: Map<String, Value>,
+    pub by_priority: Map<String, Value>,
+    pub by_tag: Map<String, Value>,
+}
+
+// ---------------------------------------------------------------------------
+// API handlers
+// ---------------------------------------------------------------------------
+
+/// POST /api/tasks — Create a new task (201).
+pub async fn api_create_task(
+    State(state): State<AppState>,
+    Json(body): Json<CreateTaskBody>,
+) -> Result<impl IntoResponse, AppError> {
+    // title is required
+    let title = body
+        .title
+        .ok_or_else(|| AppError::Validation("title is required".to_string()))?;
+
+    let priority = body.priority.unwrap_or(2);
+    let description = body.description.clone();
+    let tags = body.tags.clone().unwrap_or_default();
+    let parent_id = body.parent_id.clone();
+
+    let db = state.db.clone();
+    let result = tokio::task::spawn_blocking(move || -> Result<Task, String> {
+        let db = db.lock().unwrap();
+
+        // Generate ID
+        let id = if let Some(ref pid) = parent_id {
+            // Verify parent exists
+            db.get_task(pid)?
+                .ok_or_else(|| format!("parent task not found: {pid}"))?;
+            db.generate_child_id(pid)?
+        } else {
+            db.generate_id()?
+        };
+
+        let now = chrono::Utc::now();
+        let task = Task {
+            id: id.clone(),
+            title: title.clone(),
+            description: description.clone(),
+            status: crate::models::Status::Open,
+            priority,
+            assignee: None,
+            parent_id: parent_id.clone(),
+            tags: tags.clone(),
+            created_at: now,
+            updated_at: now,
+            close_reason: None,
+            notes: None,
+        };
+
+        db.insert_task(&task)?;
+
+        // Auto-tag parent as epic when a child is created
+        if let Some(ref pid) = parent_id {
+            let mut parent_tags = db.get_task_tags(pid)?;
+            if !parent_tags.contains(&"epic".to_string()) {
+                parent_tags.push("epic".to_string());
+                db.update_tags(pid, &parent_tags)?;
+            }
+        }
+
+        Ok(task)
+    })
+    .await
+    .map_err(|e| AppError::Internal(e.to_string()))?
+    .map_err(AppError::Internal)?;
+
+    Ok((StatusCode::CREATED, Json(result)))
+}
+
+/// GET /api/tasks — List tasks with optional filters (200).
+pub async fn api_list_tasks(
+    State(state): State<AppState>,
+    Query(query): Query<ListTasksQuery>,
+) -> Result<impl IntoResponse, AppError> {
+    let show_all = query.all.unwrap_or(false);
+    let status_filter = query.status.clone();
+    let priority_filter = query.priority;
+    let tag_filter = query.tag.clone();
+    let parent_filter = query.parent.clone();
+
+    let db = state.db.clone();
+    let tasks = tokio::task::spawn_blocking(move || {
+        let db = db.lock().unwrap();
+        db.list_tasks(
+            show_all,
+            status_filter.as_deref(),
+            priority_filter,
+            tag_filter.as_deref(),
+            parent_filter.as_deref(),
+        )
+    })
+    .await
+    .map_err(|e| AppError::Internal(e.to_string()))?
+    .map_err(AppError::Internal)?;
+
+    Ok(Json(tasks))
+}
+
+/// GET /api/tasks/ready — Tasks with no open blockers (200).
+pub async fn api_ready_tasks(
+    State(state): State<AppState>,
+    Query(query): Query<ReadyTasksQuery>,
+) -> Result<impl IntoResponse, AppError> {
+    let limit = query.limit;
+    let db = state.db.clone();
+    let tasks = tokio::task::spawn_blocking(move || {
+        let db = db.lock().unwrap();
+        db.get_ready_tasks(limit)
+    })
+    .await
+    .map_err(|e| AppError::Internal(e.to_string()))?
+    .map_err(AppError::Internal)?;
+
+    Ok(Json(tasks))
+}
+
+/// GET /api/tasks/blocked — Tasks with open blockers (200).
+pub async fn api_blocked_tasks(
+    State(state): State<AppState>,
+) -> Result<impl IntoResponse, AppError> {
+    let db = state.db.clone();
+    let tasks = tokio::task::spawn_blocking(move || {
+        let db = db.lock().unwrap();
+        db.get_blocked_tasks()
+    })
+    .await
+    .map_err(|e| AppError::Internal(e.to_string()))?
+    .map_err(AppError::Internal)?;
+
+    Ok(Json(tasks))
+}
+
+/// GET /api/tasks/:id — Show a task by ID (200 or 404).
+pub async fn api_show_task(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<impl IntoResponse, AppError> {
+    let db = state.db.clone();
+    let task = tokio::task::spawn_blocking(move || {
+        let db = db.lock().unwrap();
+        db.get_task(&id)
+    })
+    .await
+    .map_err(|e| AppError::Internal(e.to_string()))?
+    .map_err(AppError::Internal)?;
+
+    match task {
+        Some(t) => Ok(Json(t)),
+        None => Err(AppError::NotFound("task not found".to_string())),
+    }
+}
+
+/// PATCH /api/tasks/:id — Update task fields (200 or 404).
+pub async fn api_update_task(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    Json(body): Json<UpdateTaskBody>,
+) -> Result<impl IntoResponse, AppError> {
+    let db = state.db.clone();
+    let result = tokio::task::spawn_blocking(move || -> Result<Task, String> {
+        let db = db.lock().unwrap();
+
+        // Verify task exists
+        db.get_task(&id)?
+            .ok_or_else(|| format!("task not found: {id}"))?;
+
+        // Update tags separately if provided
+        if let Some(ref tags) = body.tags {
+            db.update_tags(&id, tags)?;
+        }
+
+        // Update remaining fields
+        db.update_task(
+            &id,
+            body.title.as_deref(),
+            body.priority,
+            body.status.as_deref(),
+            body.description.as_deref(),
+            body.assignee.as_deref(),
+            None,
+            body.notes.as_deref(),
+        )?;
+
+        // Return the updated task
+        db.get_task(&id)?
+            .ok_or_else(|| format!("task not found after update: {id}"))
+    })
+    .await
+    .map_err(|e| AppError::Internal(e.to_string()))?;
+
+    match result {
+        Ok(task) => Ok(Json(task)),
+        Err(e) if e.contains("not found") => Err(AppError::NotFound(e)),
+        Err(e) => Err(AppError::Internal(e)),
+    }
+}
+
+/// POST /api/tasks/:id/close — Close a task (200, 404, or 422).
+pub async fn api_close_task(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    Json(body): Json<CloseTaskBody>,
+) -> Result<impl IntoResponse, AppError> {
+    // Validate reason if provided
+    let reason = body.reason.as_deref();
+    if let Some(r) = reason {
+        validate_close_reason(r).map_err(AppError::Validation)?;
+    }
+
+    let reason_owned = body.reason.clone();
+    let comment_owned = body.comment.clone();
+
+    let db = state.db.clone();
+    let result = tokio::task::spawn_blocking(move || -> Result<Task, String> {
+        let db = db.lock().unwrap();
+
+        // Verify task exists
+        db.get_task(&id)?
+            .ok_or_else(|| format!("task not found: {id}"))?;
+
+        // Close the task
+        db.close_task(&id, reason_owned.as_deref())?;
+
+        // Add comment if provided
+        if let Some(ref comment) = comment_owned {
+            db.add_comment(&id, comment)?;
+        }
+
+        // Return the updated task
+        db.get_task(&id)?
+            .ok_or_else(|| format!("task not found after close: {id}"))
+    })
+    .await
+    .map_err(|e| AppError::Internal(e.to_string()))?;
+
+    match result {
+        Ok(task) => Ok(Json(task)),
+        Err(e) if e.contains("not found") => Err(AppError::NotFound(e)),
+        Err(e) => Err(AppError::Internal(e)),
+    }
+}
+
+/// POST /api/tasks/:id/deps — Add a dependency (201 or 409).
+pub async fn api_add_dep(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    Json(body): Json<AddDepBody>,
+) -> Result<impl IntoResponse, AppError> {
+    let parent_id = body.parent_id.clone();
+    let db = state.db.clone();
+
+    let result = tokio::task::spawn_blocking(move || {
+        let db = db.lock().unwrap();
+        db.add_dependency(&id, &parent_id)
+    })
+    .await
+    .map_err(|e| AppError::Internal(e.to_string()))?;
+
+    match result {
+        Ok(()) => Ok(StatusCode::CREATED),
+        Err(e) if e.contains("circular") || e.contains("already exists") => {
+            Err(AppError::Conflict(e))
+        }
+        Err(e) => Err(AppError::Internal(e)),
+    }
+}
+
+/// DELETE /api/tasks/:child_id/deps/:parent_id — Remove a dependency (204).
+pub async fn api_remove_dep(
+    State(state): State<AppState>,
+    Path((child_id, parent_id)): Path<(String, String)>,
+) -> Result<impl IntoResponse, AppError> {
+    let db = state.db.clone();
+
+    let result = tokio::task::spawn_blocking(move || {
+        let db = db.lock().unwrap();
+        db.remove_dependency(&child_id, &parent_id)
+    })
+    .await
+    .map_err(|e| AppError::Internal(e.to_string()))?;
+
+    match result {
+        Ok(()) => Ok(StatusCode::NO_CONTENT),
+        Err(e) if e.contains("not found") => Err(AppError::NotFound(e)),
+        Err(e) => Err(AppError::Internal(e)),
+    }
+}
+
+/// POST /api/tasks/:id/comments — Add a comment (201).
+pub async fn api_add_comment(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    Json(body): Json<AddCommentBody>,
+) -> Result<impl IntoResponse, AppError> {
+    let comment_body = body.body.clone();
+    let db = state.db.clone();
+
+    let comment = tokio::task::spawn_blocking(move || {
+        let db = db.lock().unwrap();
+        db.add_comment(&id, &comment_body)
+    })
+    .await
+    .map_err(|e| AppError::Internal(e.to_string()))?
+    .map_err(AppError::Internal)?;
+
+    Ok((StatusCode::CREATED, Json(comment)))
+}
+
+/// GET /api/tasks/:id/comments — List comments on a task (200).
+pub async fn api_list_comments(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<impl IntoResponse, AppError> {
+    let db = state.db.clone();
+    let comments: Vec<Comment> = tokio::task::spawn_blocking(move || {
+        let db = db.lock().unwrap();
+        db.get_comments(&id)
+    })
+    .await
+    .map_err(|e| AppError::Internal(e.to_string()))?
+    .map_err(AppError::Internal)?;
+
+    Ok(Json(comments))
+}
+
+/// GET /api/tasks/:id/children — List subtasks (200).
+pub async fn api_children(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<impl IntoResponse, AppError> {
+    let db = state.db.clone();
+    let tasks: Vec<Task> = tokio::task::spawn_blocking(move || {
+        let db = db.lock().unwrap();
+        db.get_children(&id)
+    })
+    .await
+    .map_err(|e| AppError::Internal(e.to_string()))?
+    .map_err(AppError::Internal)?;
+
+    Ok(Json(tasks))
+}
+
+/// GET /api/stats — Task statistics (200).
+pub async fn api_stats(State(state): State<AppState>) -> Result<impl IntoResponse, AppError> {
+    let db = state.db.clone();
+    let result = tokio::task::spawn_blocking(move || -> Result<StatsResponse, String> {
+        let db = db.lock().unwrap();
+
+        let by_status_vec = db.task_count_by_status()?;
+        let by_priority_vec = db.task_count_by_priority()?;
+        let by_tag_vec = db.task_count_by_tag()?;
+
+        let by_status: Map<String, Value> = by_status_vec
+            .into_iter()
+            .map(|(k, v)| (k, Value::Number(v.into())))
+            .collect();
+
+        let by_priority: Map<String, Value> = by_priority_vec
+            .into_iter()
+            .map(|(k, v)| (k.to_string(), Value::Number(v.into())))
+            .collect();
+
+        let by_tag: Map<String, Value> = by_tag_vec
+            .into_iter()
+            .map(|(k, v)| (k, Value::Number(v.into())))
+            .collect();
+
+        Ok(StatsResponse {
+            by_status,
+            by_priority,
+            by_tag,
+        })
+    })
+    .await
+    .map_err(|e| AppError::Internal(e.to_string()))?
+    .map_err(AppError::Internal)?;
+
+    Ok(Json(result))
 }

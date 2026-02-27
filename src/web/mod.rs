@@ -4,7 +4,7 @@ use axum::{
     extract::Path as AxumPath,
     http::{StatusCode, header},
     response::{IntoResponse, Response},
-    routing::get,
+    routing::{delete, get, post},
 };
 use rust_embed::Embed;
 use std::sync::{Arc, Mutex};
@@ -15,7 +15,7 @@ pub struct AppState {
     pub db: Arc<Mutex<Database>>,
 }
 
-mod errors;
+pub mod errors;
 mod handlers;
 
 /// Embedded static assets (htmx, pico CSS, etc.) compiled into the binary.
@@ -43,8 +43,32 @@ async fn static_handler(AxumPath(path): AxumPath<String>) -> Response {
 /// Build the axum router with all routes.
 pub fn create_router(state: AppState) -> Router {
     Router::new()
+        // HTML routes
         .route("/", get(handlers::index))
         .route("/static/{*path}", get(static_handler))
+        // API routes — specific routes before parameterized ones
+        .route(
+            "/api/tasks",
+            get(handlers::api_list_tasks).post(handlers::api_create_task),
+        )
+        .route("/api/tasks/ready", get(handlers::api_ready_tasks))
+        .route("/api/tasks/blocked", get(handlers::api_blocked_tasks))
+        .route(
+            "/api/tasks/{id}",
+            get(handlers::api_show_task).patch(handlers::api_update_task),
+        )
+        .route("/api/tasks/{id}/close", post(handlers::api_close_task))
+        .route("/api/tasks/{id}/deps", post(handlers::api_add_dep))
+        .route(
+            "/api/tasks/{child_id}/deps/{parent_id}",
+            delete(handlers::api_remove_dep),
+        )
+        .route(
+            "/api/tasks/{id}/comments",
+            get(handlers::api_list_comments).post(handlers::api_add_comment),
+        )
+        .route("/api/tasks/{id}/children", get(handlers::api_children))
+        .route("/api/stats", get(handlers::api_stats))
         .with_state(state)
 }
 
