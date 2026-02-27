@@ -154,6 +154,12 @@ enum Commands {
     },
     /// Show blocked tasks (tasks with open blockers)
     Blocked,
+    /// Start the web UI server
+    Serve {
+        /// Port to listen on
+        #[arg(short, long, default_value_t = 3000)]
+        port: u16,
+    },
 }
 
 #[derive(Subcommand)]
@@ -266,6 +272,20 @@ fn main() {
         },
         Commands::Comment { id, body } => commands::comment::run(&db_path, &id, &body, cli.json),
         Commands::Blocked => commands::blocked::run(&db_path, cli.json),
+        Commands::Serve { port } => {
+            let rt = tokio::runtime::Runtime::new()
+                .map_err(|e| format!("failed to create tokio runtime: {e}"))
+                .unwrap_or_else(|e| {
+                    eprintln!("error: {e}");
+                    std::process::exit(1);
+                });
+            let result = rt.block_on(crate::web::serve(&db_path, port));
+            if let Err(e) = result {
+                eprintln!("error: {e}");
+                std::process::exit(1);
+            }
+            return;
+        }
     };
 
     if let Err(e) = result {

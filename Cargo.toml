@@ -27,7 +27,7 @@ uuid = { version = "1", features = ["v4"] }
 tabled = "0.17"
 colored = "3"
 axum = "0.8"
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "time"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "time", "signal"] }
 askama = "0.13"
 axum-htmx = "0.6"
 rust-embed = "8"

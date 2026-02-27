@@ -48,7 +48,7 @@ pub fn create_router(state: AppState) -> Router {
         .with_state(state)
 }
 
-/// Start the web server on the given port.
+/// Start the web server on the given port, shutting down gracefully on Ctrl+C.
 pub async fn serve(db_path: &std::path::Path, port: u16) -> Result<(), String> {
     let db = Database::open(db_path)?;
     let state = AppState {
@@ -56,11 +56,16 @@ pub async fn serve(db_path: &std::path::Path, port: u16) -> Result<(), String> {
     };
     let app = create_router(state);
     let addr = format!("127.0.0.1:{port}");
-    println!("Tacks web UI: http://{addr}");
+    println!("Listening on http://{addr}");
     let listener = tokio::net::TcpListener::bind(&addr)
         .await
         .map_err(|e| format!("failed to bind to {addr}: {e}"))?;
     axum::serve(listener, app)
+        .with_graceful_shutdown(async {
+            tokio::signal::ctrl_c()
+                .await
+                .expect("failed to listen for ctrl_c");
+        })
         .await
         .map_err(|e| format!("server error: {e}"))
 }
