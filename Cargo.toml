@@ -22,13 +22,18 @@ chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1", features = ["v4"] }
 tabled = "0.17"
 colored = "3"
+axum = "0.8"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net"] }
+askama = "0.13"
+axum-htmx = "0.6"
+rust-embed = "8"
+tower-http = { version = "0.6", features = ["cors"] }
 
 [dev-dependencies]
 tempfile = "3"
 assert_cmd = "2"
 predicates = "3"
 cucumber = "0.21"
-tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 
 [[test]]
 name = "bdd"

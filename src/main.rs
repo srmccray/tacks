@@ -1,6 +1,7 @@
 mod commands;
 mod db;
 mod models;
+pub mod web;
 
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
