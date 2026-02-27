@@ -43,8 +43,13 @@ async fn static_handler(AxumPath(path): AxumPath<String>) -> Response {
 /// Build the axum router with all routes.
 pub fn create_router(state: AppState) -> Router {
     Router::new()
-        // HTML routes
+        // HTML routes — specific routes before parameterized ones
         .route("/", get(handlers::index))
+        .route("/tasks/new", get(handlers::task_new))
+        .route("/tasks/{id}", get(handlers::task_detail))
+        .route("/tasks", get(handlers::task_list))
+        .route("/board", get(handlers::board))
+        .route("/epics", get(handlers::epics))
         .route("/static/{*path}", get(static_handler))
         // API routes — specific routes before parameterized ones
         .route(

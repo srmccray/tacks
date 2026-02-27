@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Tasks — Tacks{% endblock %}
+
+{% block content %}
+<h1>Tasks</h1>
+
+<form method="get" action="/tasks">
+  <div class="grid">
+    <select name="status">
+      <option value="">All statuses</option>
+      <option value="open" {% if status_filter.as_deref() == Some("open") %}selected{% endif %}>Open</option>
+      <option value="in_progress" {% if status_filter.as_deref() == Some("in_progress") %}selected{% endif %}>In Progress</option>
+      <option value="done" {% if status_filter.as_deref() == Some("done") %}selected{% endif %}>Done</option>
+      <option value="blocked" {% if status_filter.as_deref() == Some("blocked") %}selected{% endif %}>Blocked</option>
+    </select>
+    <select name="priority">
+      <option value="">All priorities</option>
+      <option value="1" {% if priority_filter.as_deref() == Some("1") %}selected{% endif %}>P1</option>
+      <option value="2" {% if priority_filter.as_deref() == Some("2") %}selected{% endif %}>P2</option>
+      <option value="3" {% if priority_filter.as_deref() == Some("3") %}selected{% endif %}>P3</option>
+    </select>
+    <input type="text" name="tag" placeholder="Filter by tag" value="{{ tag_filter.as_deref().unwrap_or_default() }}">
+    <button type="submit">Filter</button>
+  </div>
+</form>
+
+<table>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Title</th>
+      <th>Status</th>
+      <th>Priority</th>
+      <th>Tags</th>
+      <th>Updated</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for task in tasks %}
+    <tr>
+      <td>{{ task.id }}</td>
+      <td><a href="/tasks/{{ task.id }}">{{ task.title }}</a></td>
+      <td>{{ task.status }}</td>
+      <td>{{ task.priority }}</td>
+      <td>{{ task.tags|join(", ") }}</td>
+      <td>{{ task.updated_at }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

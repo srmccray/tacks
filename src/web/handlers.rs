@@ -585,6 +585,179 @@ pub async fn api_prime(State(state): State<AppState>) -> Result<impl IntoRespons
     Ok(Json(result))
 }
 
+// ---------------------------------------------------------------------------
+// HTML view handlers
+// ---------------------------------------------------------------------------
+
+/// Template for the task list page at GET /tasks.
+#[derive(Template)]
+#[template(path = "tasks_list.html")]
+struct TaskListTemplate {
+    tasks: Vec<Task>,
+    status_filter: Option<String>,
+    priority_filter: Option<String>,
+    tag_filter: Option<String>,
+}
+
+/// Template for the task detail page at GET /tasks/:id.
+#[derive(Template)]
+#[template(path = "task_detail.html")]
+struct TaskDetailTemplate {
+    task: Task,
+}
+
+/// Template for the kanban board page at GET /board.
+#[derive(Template)]
+#[template(path = "board.html")]
+struct BoardTemplate {
+    open_tasks: Vec<Task>,
+    in_progress_tasks: Vec<Task>,
+    blocked_tasks: Vec<Task>,
+    done_tasks: Vec<Task>,
+}
+
+/// Template struct for one row in the epics view.
+struct EpicRow {
+    task: Task,
+    children_total: usize,
+    children_done: usize,
+}
+
+/// Template for the epics page at GET /epics.
+#[derive(Template)]
+#[template(path = "epics.html")]
+struct EpicsTemplate {
+    epics: Vec<EpicRow>,
+}
+
+/// Template for the create task form at GET /tasks/new.
+#[derive(Template)]
+#[template(path = "task_new.html")]
+struct TaskNewTemplate;
+
+/// GET /tasks — Task list page with optional filter query params.
+pub async fn task_list(
+    State(state): State<AppState>,
+    Query(params): Query<ListTasksQuery>,
+) -> Response {
+    let show_all = params.status.is_some() || params.all.unwrap_or(false);
+    let status_filter = params.status.clone();
+    let priority_filter = params.priority;
+    let tag_filter = params.tag.clone();
+
+    let db = state.db.clone();
+    let tasks = tokio::task::spawn_blocking(move || {
+        let db = db.lock().unwrap();
+        db.list_tasks(
+            show_all,
+            status_filter.as_deref(),
+            priority_filter,
+            tag_filter.as_deref(),
+            None,
+        )
+    })
+    .await
+    .unwrap()
+    .unwrap_or_default();
+
+    render_template(TaskListTemplate {
+        tasks,
+        status_filter: params.status,
+        priority_filter: params.priority.map(|p| p.to_string()),
+        tag_filter: params.tag,
+    })
+}
+
+/// GET /tasks/new — Create task form.
+pub async fn task_new() -> Response {
+    render_template(TaskNewTemplate)
+}
+
+/// GET /tasks/:id — Task detail page (200 or 404).
+pub async fn task_detail(State(state): State<AppState>, Path(id): Path<String>) -> Response {
+    let db = state.db.clone();
+    let result = tokio::task::spawn_blocking(move || {
+        let db = db.lock().unwrap();
+        db.get_task(&id)
+    })
+    .await
+    .unwrap();
+
+    match result {
+        Ok(Some(task)) => render_template(TaskDetailTemplate { task }),
+        Ok(None) => (StatusCode::NOT_FOUND, "task not found").into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("database error: {e}"),
+        )
+            .into_response(),
+    }
+}
+
+/// GET /board — Kanban board view grouped by status.
+pub async fn board(State(state): State<AppState>) -> Response {
+    let db = state.db.clone();
+    let result = tokio::task::spawn_blocking(move || -> Result<BoardTemplate, String> {
+        let db = db.lock().unwrap();
+        let open_tasks = db.list_tasks(false, Some("open"), None, None, None)?;
+        let in_progress_tasks = db.list_tasks(false, Some("in_progress"), None, None, None)?;
+        let blocked_tasks = db.list_tasks(false, Some("blocked"), None, None, None)?;
+        let done_tasks = db.list_tasks(true, Some("done"), None, None, None)?;
+        Ok(BoardTemplate {
+            open_tasks,
+            in_progress_tasks,
+            blocked_tasks,
+            done_tasks,
+        })
+    })
+    .await
+    .unwrap();
+
+    match result {
+        Ok(tmpl) => render_template(tmpl),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("database error: {e}"),
+        )
+            .into_response(),
+    }
+}
+
+/// GET /epics — Epics overview with subtask progress.
+pub async fn epics(State(state): State<AppState>) -> Response {
+    let db = state.db.clone();
+    let result = tokio::task::spawn_blocking(move || -> Result<Vec<EpicRow>, String> {
+        let db = db.lock().unwrap();
+        let epic_tasks = db.list_tasks(true, None, None, Some("epic"), None)?;
+        let mut rows = Vec::with_capacity(epic_tasks.len());
+        for task in epic_tasks {
+            let children = db.get_children(&task.id)?;
+            let children_total = children.len();
+            let children_done = children
+                .iter()
+                .filter(|c| matches!(c.status, crate::models::Status::Done))
+                .count();
+            rows.push(EpicRow {
+                task,
+                children_total,
+                children_done,
+            });
+        }
+        Ok(rows)
+    })
+    .await
+    .unwrap();
+
+    match result {
+        Ok(epics) => render_template(EpicsTemplate { epics }),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("database error: {e}"),
+        )
+            .into_response(),
+    }
+}
+
 /// GET /api/stats — Task statistics (200).
 pub async fn api_stats(State(state): State<AppState>) -> Result<impl IntoResponse, AppError> {
     let db = state.db.clone();

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}{{ task.title }} — Tacks{% endblock %}
+
+{% block content %}
+<h1>{{ task.title }}</h1>
+
+<dl>
+  <dt>Status</dt>
+  <dd>{{ task.status }}</dd>
+  <dt>Priority</dt>
+  <dd>{{ task.priority }}</dd>
+  {% if let Some(assignee) = task.assignee.as_deref() %}
+  <dt>Assignee</dt>
+  <dd>{{ assignee }}</dd>
+  {% endif %}
+  {% if let Some(desc) = task.description.as_deref() %}
+  <dt>Description</dt>
+  <dd>{{ desc }}</dd>
+  {% endif %}
+  {% if !task.tags.is_empty() %}
+  <dt>Tags</dt>
+  <dd>{{ task.tags|join(", ") }}</dd>
+  {% endif %}
+  <dt>Created</dt>
+  <dd>{{ task.created_at }}</dd>
+  <dt>Updated</dt>
+  <dd>{{ task.updated_at }}</dd>
+</dl>
+
+<p><a href="/tasks">Back to task list</a></p>
+{% endblock %}

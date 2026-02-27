@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Epics — Tacks{% endblock %}
+
+{% block content %}
+<h1>Epics</h1>
+
+<table>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Title</th>
+      <th>Status</th>
+      <th>Progress</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for ep in epics %}
+    <tr>
+      <td>{{ ep.task.id }}</td>
+      <td><a href="/tasks/{{ ep.task.id }}">{{ ep.task.title }}</a></td>
+      <td>{{ ep.task.status }}</td>
+      <td>{{ ep.children_done }}/{{ ep.children_total }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

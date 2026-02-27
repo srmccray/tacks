@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Board — Tacks{% endblock %}
+
+{% block content %}
+<h1>Board</h1>
+
+<div class="grid">
+  <div>
+    <h2>Open</h2>
+    {% for task in open_tasks %}
+    <article>
+      <a href="/tasks/{{ task.id }}">{{ task.title }}</a>
+    </article>
+    {% endfor %}
+  </div>
+  <div>
+    <h2>In Progress</h2>
+    {% for task in in_progress_tasks %}
+    <article>
+      <a href="/tasks/{{ task.id }}">{{ task.title }}</a>
+    </article>
+    {% endfor %}
+  </div>
+  <div>
+    <h2>Blocked</h2>
+    {% for task in blocked_tasks %}
+    <article>
+      <a href="/tasks/{{ task.id }}">{{ task.title }}</a>
+    </article>
+    {% endfor %}
+  </div>
+  <div>
+    <h2>Done</h2>
+    {% for task in done_tasks %}
+    <article>
+      <a href="/tasks/{{ task.id }}">{{ task.title }}</a>
+    </article>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
