@@ -1,5 +1,12 @@
 use crate::db::Database;
-use axum::{Router, routing::get};
+use axum::{
+    Router,
+    extract::Path as AxumPath,
+    http::{StatusCode, header},
+    response::{IntoResponse, Response},
+    routing::get,
+};
+use rust_embed::Embed;
 use std::sync::{Arc, Mutex};
 
 /// Shared application state for the web server.
@@ -11,10 +18,33 @@ pub struct AppState {
 mod errors;
 mod handlers;
 
+/// Embedded static assets (htmx, pico CSS, etc.) compiled into the binary.
+#[derive(Embed)]
+#[folder = "static/"]
+struct StaticAssets;
+
+/// Serve embedded static files at /static/{path}.
+async fn static_handler(AxumPath(path): AxumPath<String>) -> Response {
+    match StaticAssets::get(&path) {
+        Some(content) => {
+            let mime = if path.ends_with(".js") {
+                "application/javascript"
+            } else if path.ends_with(".css") {
+                "text/css"
+            } else {
+                "application/octet-stream"
+            };
+            ([(header::CONTENT_TYPE, mime)], content.data).into_response()
+        }
+        None => StatusCode::NOT_FOUND.into_response(),
+    }
+}
+
 /// Build the axum router with all routes.
 pub fn create_router(state: AppState) -> Router {
     Router::new()
         .route("/", get(handlers::index))
+        .route("/static/{*path}", get(static_handler))
         .with_state(state)
 }
 
