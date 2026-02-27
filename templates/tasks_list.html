@@ -44,7 +44,7 @@
   </thead>
   <tbody>
     {% for task in tasks %}
-    <tr>
+    <tr tabindex="-1" data-href="/tasks/{{ task.id }}">
       <td>{{ task.id }}</td>
       <td><a href="/tasks/{{ task.id }}">{{ task.title }}</a></td>
       <td>{{ task.status }}</td>
