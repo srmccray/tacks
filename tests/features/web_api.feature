@@ -12,19 +12,19 @@ Feature: REST API endpoints
   # ---------------------------------------------------------------------------
 
   Scenario: POST /api/tasks creates a task and returns 201
-    When I POST "/api/tasks" with body {"title":"Buy milk","priority":2}
+    When I POST "/api/tasks" with body '{"title":"Buy milk","priority":2}'
     Then the response status is 201
     And the response JSON has field "id"
     And the response JSON field "title" equals "Buy milk"
     And the response JSON field "status" equals "open"
 
   Scenario: POST /api/tasks with tags stores them on the task
-    When I POST "/api/tasks" with body {"title":"Tagged task","tags":["backend","urgent"]}
+    When I POST "/api/tasks" with body '{"title":"Tagged task","tags":["backend","urgent"]}'
     Then the response status is 201
     And the response JSON field "title" equals "Tagged task"
 
   Scenario: POST /api/tasks with missing title returns 422
-    When I POST "/api/tasks" with body {"priority":1}
+    When I POST "/api/tasks" with body '{"priority":1}'
     Then the response status is 422
 
   # ---------------------------------------------------------------------------
@@ -87,24 +87,24 @@ Feature: REST API endpoints
 
   Scenario: PATCH /api/tasks/:id updates the title
     Given I created a task via API with title "Old title" as "updatable"
-    When I PATCH the API task "updatable" with body {"title":"New title"}
+    When I PATCH the API task "updatable" with body '{"title":"New title"}'
     Then the response status is 200
     And the response JSON field "title" equals "New title"
 
   Scenario: PATCH /api/tasks/:id updates the status
     Given I created a task via API with title "Status task" as "status-task"
-    When I PATCH the API task "status-task" with body {"status":"in_progress"}
+    When I PATCH the API task "status-task" with body '{"status":"in_progress"}'
     Then the response status is 200
     And the response JSON field "status" equals "in_progress"
 
   Scenario: PATCH /api/tasks/:id updates the priority
     Given I created a task via API with title "Priority task" as "prio-task"
-    When I PATCH the API task "prio-task" with body {"priority":1}
+    When I PATCH the API task "prio-task" with body '{"priority":1}'
     Then the response status is 200
     And the response JSON field "priority" equals 1
 
   Scenario: PATCH /api/tasks/:id returns 404 for unknown id
-    When I PATCH "/api/tasks/tk-0000" with body {"title":"Ghost"}
+    When I PATCH "/api/tasks/tk-0000" with body '{"title":"Ghost"}'
     Then the response status is 404
 
   # ---------------------------------------------------------------------------
@@ -113,24 +113,24 @@ Feature: REST API endpoints
 
   Scenario: POST /api/tasks/:id/close closes a task
     Given I created a task via API with title "Task to close" as "closeable"
-    When I POST the close endpoint for API task "closeable" with body {"reason":"done"}
+    When I POST the close endpoint for API task "closeable" with body '{"reason":"done"}'
     Then the response status is 200
     And the response JSON field "status" equals "done"
     And the response JSON field "close_reason" equals "done"
 
   Scenario: POST /api/tasks/:id/close with a comment stores it
     Given I created a task via API with title "Task with comment" as "comment-task"
-    When I POST the close endpoint for API task "comment-task" with body {"reason":"duplicate","comment":"Covered by tk-0001"}
+    When I POST the close endpoint for API task "comment-task" with body '{"reason":"duplicate","comment":"Covered by tk-0001"}'
     Then the response status is 200
     And the response JSON field "status" equals "done"
 
   Scenario: POST /api/tasks/:id/close with invalid reason returns 422
     Given I created a task via API with title "Bad close task" as "bad-close"
-    When I POST the close endpoint for API task "bad-close" with body {"reason":"bogus"}
+    When I POST the close endpoint for API task "bad-close" with body '{"reason":"bogus"}'
     Then the response status is 422
 
   Scenario: POST /api/tasks/:id/close returns 404 for unknown id
-    When I POST "/api/tasks/tk-0000/close" with body {"reason":"done"}
+    When I POST "/api/tasks/tk-0000/close" with body '{"reason":"done"}'
     Then the response status is 404
 
   # ---------------------------------------------------------------------------
@@ -183,14 +183,14 @@ Feature: REST API endpoints
   Scenario: POST /api/tasks/:id/deps adds a dependency
     Given I created a task via API with title "Dep parent" as "dep-parent"
     And I created a task via API with title "Dep child" as "dep-child"
-    When I POST the deps endpoint for API task "dep-child" with body {"parent_id":"dep-parent"}
+    When I POST the deps endpoint for API task "dep-child" with body '{"parent_id":"dep-parent"}'
     Then the response status is 201
 
   Scenario: POST /api/tasks/:id/deps returns 409 on cycle
     Given I created a task via API with title "Cycle A" as "cyc-a"
     And I created a task via API with title "Cycle B" as "cyc-b"
     And I added API dependency so "cyc-b" is blocked by "cyc-a"
-    When I POST the deps endpoint for API task "cyc-a" with body {"parent_id":"cyc-b"}
+    When I POST the deps endpoint for API task "cyc-a" with body '{"parent_id":"cyc-b"}'
     Then the response status is 409
 
   Scenario: DELETE /api/tasks/:child/deps/:parent removes a dependency
@@ -206,7 +206,7 @@ Feature: REST API endpoints
 
   Scenario: POST /api/tasks/:id/comments adds a comment
     Given I created a task via API with title "Commented task" as "comm-task"
-    When I POST the comments endpoint for API task "comm-task" with body {"body":"Work in progress"}
+    When I POST the comments endpoint for API task "comm-task" with body '{"body":"Work in progress"}'
     Then the response status is 201
     And the response JSON has field "id"
     And the response JSON field "body" equals "Work in progress"
