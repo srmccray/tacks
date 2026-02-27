@@ -1,0 +1,54 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cargo build:*)",
+      "Bash(cargo test:*)",
+      "Bash(cargo clippy:*)",
+      "Bash(cargo fmt:*)",
+      "Bash(cargo run:*)",
+      "Bash(tk:*)",
+      "Bash(sqlite3:*)",
+      "Bash(mkdir:*)",
+      "Bash(ls:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)"
+    ],
+    "deny": []
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "tk prime 2>/dev/null || echo 'Tacks context: Run tk prime to see available work'"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "mkdir -p /Users/stephen/Projects/tacks/memory/sessions && echo '# Pre-Compaction State\n\nAuto-persisted: '$(date -Iseconds) > /Users/stephen/Projects/tacks/memory/sessions/pre-compact.md"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [[ \"$CLAUDE_FILE_PATH\" == *.rs ]]; then rustfmt \"$CLAUDE_FILE_PATH\" 2>/dev/null || true; fi"
+          }
+        ]
+      }
+    ]
+  }
+}

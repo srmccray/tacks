@@ -75,6 +75,19 @@ Tacks is built to be consumed by AI coding agents like Claude Code:
 - **Close guard**: Can't close a task with open subtasks unless you use `--force`
 - **Tags over types**: Epic, bug, etc. are tags, not a type system. The `epic` tag is auto-added when you create a subtask.
 
+## Stability contract
+
+Tacks is consumed by downstream tools (e.g., [Tackline](https://github.com/steveyegge/tackline)) that call `tk` commands in hooks, skills, and agent definitions. The CLI interface is stable and all changes are backwards-compatible:
+
+- **Commands and flags are permanent.** No existing command, subcommand, or flag will be removed or renamed. New flags are always optional.
+- **JSON output is frozen.** Fields in `--json` output will not be removed or have their types changed. New fields may be added.
+- **Enums are append-only.** Status values (`open`, `in_progress`, `done`, `blocked`) and close reasons (`done`, `duplicate`, `absorbed`, `stale`, `superseded`) will not be removed. New values may be added.
+- **DB schema is additive.** Existing columns and tables are never removed or renamed. New columns are nullable or defaulted.
+- **Exit codes are stable.** 0 for success, 1 for error.
+- **ID format is stable.** `tk-XXXX` for tasks, `tk-XXXX.N` for subtasks.
+
+If a breaking change is ever necessary, it will be flagged with a `BREAKING:` commit prefix and include a migration path.
+
 ## Storage
 
 Tacks uses SQLite (bundled, no system dependency) stored at `.tacks/tacks.db` in your project directory. Override with `TACKS_DB` environment variable.
