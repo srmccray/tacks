@@ -53,6 +53,8 @@ pub fn create_router(state: AppState) -> Router {
         )
         .route("/api/tasks/ready", get(handlers::api_ready_tasks))
         .route("/api/tasks/blocked", get(handlers::api_blocked_tasks))
+        .route("/api/epics", get(handlers::api_epics))
+        .route("/api/prime", get(handlers::api_prime))
         .route(
             "/api/tasks/{id}",
             get(handlers::api_show_task).patch(handlers::api_update_task),
@@ -68,6 +70,8 @@ pub fn create_router(state: AppState) -> Router {
             get(handlers::api_list_comments).post(handlers::api_add_comment),
         )
         .route("/api/tasks/{id}/children", get(handlers::api_children))
+        .route("/api/tasks/{id}/blockers", get(handlers::api_blockers))
+        .route("/api/tasks/{id}/dependents", get(handlers::api_dependents))
         .route("/api/stats", get(handlers::api_stats))
         .with_state(state)
 }

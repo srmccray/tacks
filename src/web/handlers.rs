@@ -451,6 +451,140 @@ pub async fn api_children(
     Ok(Json(tasks))
 }
 
+/// GET /api/tasks/:id/blockers — List blockers for a task as full Task objects (200).
+pub async fn api_blockers(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<impl IntoResponse, AppError> {
+    let db = state.db.clone();
+    let tasks: Vec<Task> = tokio::task::spawn_blocking(move || -> Result<Vec<Task>, String> {
+        let db = db.lock().unwrap();
+        let deps = db.get_blockers(&id)?;
+        let mut tasks = Vec::with_capacity(deps.len());
+        for dep in deps {
+            if let Some(t) = db.get_task(&dep.parent_id)? {
+                tasks.push(t);
+            }
+        }
+        Ok(tasks)
+    })
+    .await
+    .map_err(|e| AppError::Internal(e.to_string()))?
+    .map_err(AppError::Internal)?;
+
+    Ok(Json(tasks))
+}
+
+/// GET /api/tasks/:id/dependents — List tasks that depend on this task (200).
+pub async fn api_dependents(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+) -> Result<impl IntoResponse, AppError> {
+    let db = state.db.clone();
+    let tasks: Vec<Task> = tokio::task::spawn_blocking(move || {
+        let db = db.lock().unwrap();
+        db.get_dependents(&id)
+    })
+    .await
+    .map_err(|e| AppError::Internal(e.to_string()))?
+    .map_err(AppError::Internal)?;
+
+    Ok(Json(tasks))
+}
+
+/// Response body for GET /api/epics — epic task with child progress counts.
+#[derive(Debug, Serialize)]
+pub struct EpicProgress {
+    pub task: Task,
+    pub children_total: usize,
+    pub children_done: usize,
+}
+
+/// GET /api/epics — List epics with child completion progress (200).
+pub async fn api_epics(State(state): State<AppState>) -> Result<impl IntoResponse, AppError> {
+    let db = state.db.clone();
+    let result: Vec<EpicProgress> =
+        tokio::task::spawn_blocking(move || -> Result<Vec<EpicProgress>, String> {
+            let db = db.lock().unwrap();
+            let epics = db.list_tasks(true, None, None, Some("epic"), None)?;
+            let mut out = Vec::with_capacity(epics.len());
+            for epic in epics {
+                let children = db.get_children(&epic.id)?;
+                let children_total = children.len();
+                let children_done = children
+                    .iter()
+                    .filter(|c| matches!(c.status, crate::models::Status::Done))
+                    .count();
+                out.push(EpicProgress {
+                    task: epic,
+                    children_total,
+                    children_done,
+                });
+            }
+            Ok(out)
+        })
+        .await
+        .map_err(|e| AppError::Internal(e.to_string()))?
+        .map_err(AppError::Internal)?;
+
+    Ok(Json(result))
+}
+
+/// Response body for GET /api/prime — AI context output.
+#[derive(Debug, Serialize)]
+pub struct PrimeResponse {
+    pub stats: StatsResponse,
+    pub in_progress: Vec<Task>,
+    pub ready: Vec<Task>,
+}
+
+/// GET /api/prime — AI context: stats + in-progress tasks + ready queue (200).
+pub async fn api_prime(State(state): State<AppState>) -> Result<impl IntoResponse, AppError> {
+    let db = state.db.clone();
+    let result = tokio::task::spawn_blocking(move || -> Result<PrimeResponse, String> {
+        let db = db.lock().unwrap();
+
+        let by_status_vec = db.task_count_by_status()?;
+        let by_priority_vec = db.task_count_by_priority()?;
+        let by_tag_vec = db.task_count_by_tag()?;
+
+        let by_status: Map<String, Value> = by_status_vec
+            .into_iter()
+            .map(|(k, v)| (k, Value::Number(v.into())))
+            .collect();
+
+        let by_priority: Map<String, Value> = by_priority_vec
+            .into_iter()
+            .map(|(k, v)| (k.to_string(), Value::Number(v.into())))
+            .collect();
+
+        let by_tag: Map<String, Value> = by_tag_vec
+            .into_iter()
+            .map(|(k, v)| (k, Value::Number(v.into())))
+            .collect();
+
+        let stats = StatsResponse {
+            by_status,
+            by_priority,
+            by_tag,
+        };
+
+        let in_progress = db.list_tasks(false, Some("in_progress"), None, None, None)?;
+        let ready = db.get_ready_tasks(Some(5))?;
+
+        Ok(PrimeResponse {
+            stats,
+            in_progress,
+            ready,
+        })
+    })
+    .await
+    .map_err(|e| AppError::Internal(e.to_string()))?
+    .map_err(AppError::Internal)?;
+
+    Ok(Json(result))
+}
+
 /// GET /api/stats — Task statistics (200).
 pub async fn api_stats(State(state): State<AppState>) -> Result<impl IntoResponse, AppError> {
     let db = state.db.clone();
