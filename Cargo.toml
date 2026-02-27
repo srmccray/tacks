@@ -37,3 +37,21 @@ harness = false
 [profile.release]
 strip = true
 lto = true
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
+
+# Config for 'dist'
+[workspace]
+[workspace.metadata.dist]
+cargo-dist-version = "0.31.0"
+ci = ["github"]
+targets = [
+    "aarch64-apple-darwin",
+    "x86_64-apple-darwin",
+    "x86_64-unknown-linux-musl",
+    "x86_64-pc-windows-msvc",
+]
+installers = ["shell", "powershell"]
