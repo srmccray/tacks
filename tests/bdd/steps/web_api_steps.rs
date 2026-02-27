@@ -131,6 +131,21 @@ async fn i_created_a_task_via_api_with_priority(
     api_create_task(world, &alias, json!({"title": title, "priority": priority})).await;
 }
 
+#[given(expr = "I created a task via API with title {string} and description {string} as {string}")]
+async fn i_created_a_task_via_api_with_description(
+    world: &mut TacksWorld,
+    title: String,
+    description: String,
+    alias: String,
+) {
+    api_create_task(
+        world,
+        &alias,
+        json!({"title": title, "description": description}),
+    )
+    .await;
+}
+
 #[given(expr = "I created a task via API with title {string} and tag {string} as {string}")]
 async fn i_created_a_task_via_api_with_tag(
     world: &mut TacksWorld,

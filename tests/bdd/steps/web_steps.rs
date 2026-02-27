@@ -59,7 +59,8 @@ pub async fn start_test_server(world: &mut TacksWorld) -> u16 {
 }
 
 /// Perform a GET request against the running test server and store the status
-/// code and body on the world.  Panics if the server port is not set.
+/// code, content-type header, and body on the world.  Panics if the server
+/// port is not set.
 pub async fn http_get(world: &mut TacksWorld, path: &str) -> (u16, String) {
     let port = world
         .server_port
@@ -72,11 +73,17 @@ pub async fn http_get(world: &mut TacksWorld, path: &str) -> (u16, String) {
         .await
         .unwrap_or_else(|e| panic!("GET {url} failed: {e}"));
     let status = resp.status().as_u16();
+    let content_type = resp
+        .headers()
+        .get(reqwest::header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_string());
     let body = resp
         .text()
         .await
         .unwrap_or_else(|e| panic!("failed to read response body: {e}"));
     world.last_response_status = Some(status);
+    world.last_response_content_type = content_type;
     world.last_response_body = Some(body.clone());
     (status, body)
 }
@@ -128,4 +135,30 @@ async fn the_response_body_contains(world: &mut TacksWorld, expected: String) {
         body.contains(&expected),
         "expected response body to contain {expected:?}, but body was:\n{body}"
     );
+}
+
+/// Assert that the most recent HTTP response has a Content-Type header
+/// containing the given value (partial match, e.g. "text/html").
+#[then(expr = "the response content type is {string}")]
+async fn the_response_content_type_is(world: &mut TacksWorld, expected: String) {
+    let actual = world
+        .last_response_content_type
+        .as_deref()
+        .unwrap_or("<no content-type header>");
+    assert!(
+        actual.contains(&expected),
+        "expected Content-Type to contain {expected:?} but got {actual:?}"
+    );
+}
+
+/// Perform a GET request to the HTML detail page for a task identified by
+/// alias (e.g. GET /tasks/:id).
+#[when(expr = "I GET the HTML task {string}")]
+async fn i_get_the_html_task(world: &mut TacksWorld, alias: String) {
+    let id = world
+        .task_ids
+        .get(&alias)
+        .unwrap_or_else(|| panic!("no task with alias '{alias}'"))
+        .clone();
+    http_get(world, &format!("/tasks/{id}")).await;
 }

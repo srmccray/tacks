@@ -28,6 +28,8 @@ pub struct TacksWorld {
     pub http_client: reqwest::Client,
     /// HTTP status code of the most recent response.
     pub last_response_status: Option<u16>,
+    /// Content-Type header of the most recent response.
+    pub last_response_content_type: Option<String>,
     /// Body text of the most recent response.
     pub last_response_body: Option<String>,
 }
@@ -45,6 +47,7 @@ impl Default for TacksWorld {
             server_handle: None,
             http_client: reqwest::Client::new(),
             last_response_status: None,
+            last_response_content_type: None,
             last_response_body: None,
         }
     }
