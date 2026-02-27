@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use std::str::FromStr;
 
 /// Valid close reasons for a task.
 pub const VALID_CLOSE_REASONS: &[&str] = &["done", "duplicate", "absorbed", "stale", "superseded"];
@@ -35,8 +36,12 @@ impl Status {
             Status::Blocked => "blocked",
         }
     }
+}
 
-    pub fn from_str(s: &str) -> Result<Self, String> {
+impl FromStr for Status {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
             "open" => Ok(Status::Open),
             "in_progress" | "in-progress" | "inprogress" => Ok(Status::InProgress),

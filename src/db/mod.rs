@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 use rusqlite::{Connection, params};
 use std::path::Path;
+use std::str::FromStr;
 
 use crate::models::{Comment, Dependency, Status, Task, validate_close_reason};
 

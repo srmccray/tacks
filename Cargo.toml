@@ -9,6 +9,10 @@ keywords = ["task-manager", "cli", "ai-agent", "sqlite", "local"]
 categories = ["command-line-utilities", "development-tools"]
 exclude = [".claude/", "AGENTS.md", "CLAUDE.md", "memory/"]
 
+[lib]
+name = "tacks"
+path = "src/lib.rs"
+
 [[bin]]
 name = "tk"
 path = "src/main.rs"
@@ -23,7 +27,7 @@ uuid = { version = "1", features = ["v4"] }
 tabled = "0.17"
 colored = "3"
 axum = "0.8"
-tokio = { version = "1", features = ["rt-multi-thread", "macros", "net"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "time"] }
 askama = "0.13"
 axum-htmx = "0.6"
 rust-embed = "8"
@@ -34,6 +38,7 @@ tempfile = "3"
 assert_cmd = "2"
 predicates = "3"
 cucumber = "0.21"
+reqwest = { version = "0.12", features = ["json"] }
 
 [[test]]
 name = "bdd"
