@@ -7,7 +7,7 @@ license = "MIT"
 repository = "https://github.com/srmccray/tacks"
 keywords = ["task-manager", "cli", "ai-agent", "sqlite", "local"]
 categories = ["command-line-utilities", "development-tools"]
-exclude = [".claude/", "AGENTS.md", "CLAUDE.md", ".beads/", "memory/"]
+exclude = [".claude/", "AGENTS.md", "CLAUDE.md", "memory/"]
 
 [[bin]]
 name = "tk"

@@ -5,7 +5,3 @@ memory/
 .claude/
 AGENTS.md
 CLAUDE.md
-
-# Beads
-.beads/
-*.beads.db
