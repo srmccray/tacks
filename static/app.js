@@ -105,6 +105,21 @@
     cards[clamped].focus();
   }
 
+  // --- Filter form: strip empty params before submit ---
+
+  document.addEventListener('submit', function (e) {
+    var form = e.target;
+    if (form.tagName !== 'FORM' || form.method !== 'get') return;
+    // Disable empty-valued inputs so they're excluded from the query string
+    Array.from(form.elements).forEach(function (el) {
+      if (el.name && el.value === '') el.disabled = true;
+    });
+    // Re-enable after navigation starts (for back-button compat)
+    setTimeout(function () {
+      Array.from(form.elements).forEach(function (el) { el.disabled = false; });
+    }, 0);
+  });
+
   // --- Global keydown handler ---
 
   document.addEventListener('keydown', function (e) {

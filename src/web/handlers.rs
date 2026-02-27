@@ -82,13 +82,41 @@ pub struct AddCommentBody {
 // Query parameter types
 // ---------------------------------------------------------------------------
 
+/// Deserialize an optional string field, treating empty strings as `None`.
+fn deserialize_empty_string_as_none<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s: Option<String> = Option::deserialize(deserializer)?;
+    match s.as_deref() {
+        None | Some("") => Ok(None),
+        Some(_) => Ok(s),
+    }
+}
+
+/// Deserialize an optional numeric field that may arrive as an empty string.
+fn deserialize_optional_u8<'de, D>(deserializer: D) -> Result<Option<u8>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s: Option<String> = Option::deserialize(deserializer)?;
+    match s.as_deref() {
+        None | Some("") => Ok(None),
+        Some(v) => v.parse::<u8>().map(Some).map_err(serde::de::Error::custom),
+    }
+}
+
 /// Query parameters for GET /api/tasks.
 #[derive(Debug, Deserialize)]
 pub struct ListTasksQuery {
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub status: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_optional_u8")]
     pub priority: Option<u8>,
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub tag: Option<String>,
     pub all: Option<bool>,
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub parent: Option<String>,
 }
 
@@ -634,6 +662,8 @@ struct TaskListTemplate {
     status_filter: Option<String>,
     priority_filter: Option<String>,
     tag_filter: Option<String>,
+    /// Pre-built query string for HTMX polling (preserves current filters).
+    poll_query: String,
 }
 
 /// Template for the task detail page at GET /tasks/:id.
@@ -672,12 +702,32 @@ struct EpicsTemplate {
 #[template(path = "task_new.html")]
 struct TaskNewTemplate;
 
+/// Build a query string from current filter params for HTMX polling.
+fn build_poll_query(status: &Option<String>, priority: Option<u8>, tag: &Option<String>) -> String {
+    let mut parts = Vec::new();
+    if let Some(s) = status {
+        parts.push(format!("status={s}"));
+    }
+    if let Some(p) = priority {
+        parts.push(format!("priority={p}"));
+    }
+    if let Some(t) = tag {
+        parts.push(format!("tag={t}"));
+    }
+    if parts.is_empty() {
+        String::new()
+    } else {
+        format!("?{}", parts.join("&"))
+    }
+}
+
 /// GET /tasks — Task list page with optional filter query params.
 pub async fn task_list(
     State(state): State<AppState>,
     Query(params): Query<ListTasksQuery>,
 ) -> Response {
-    let show_all = params.status.is_some() || params.all.unwrap_or(false);
+    let has_filter = params.status.is_some() || params.priority.is_some() || params.tag.is_some();
+    let show_all = has_filter || params.all.unwrap_or(false);
     let status_filter = params.status.clone();
     let priority_filter = params.priority;
     let tag_filter = params.tag.clone();
@@ -697,11 +747,14 @@ pub async fn task_list(
     .unwrap()
     .unwrap_or_default();
 
+    let poll_query = build_poll_query(&params.status, params.priority, &params.tag);
+
     render_template(TaskListTemplate {
         tasks,
         status_filter: params.status,
         priority_filter: params.priority.map(|p| p.to_string()),
         tag_filter: params.tag,
+        poll_query,
     })
 }
 

@@ -3,11 +3,7 @@
 {% block title %}Tasks — Tacks{% endblock %}
 
 {% block content %}
-<div id="content-area"
-     hx-get="/tasks"
-     hx-trigger="every 2s [document.visibilityState === 'visible']"
-     hx-target="this"
-     hx-select="#content-area">
+<div id="content-area">
 
 <h1>Tasks</h1>
 
@@ -42,7 +38,10 @@
       <th>Updated</th>
     </tr>
   </thead>
-  <tbody>
+  <tbody hx-get="/tasks{{ poll_query }}"
+         hx-trigger="every 2s [document.visibilityState === 'visible']"
+         hx-select="tbody"
+         hx-swap="outerHTML">
     {% for task in tasks %}
     <tr tabindex="-1" data-href="/tasks/{{ task.id }}">
       <td>{{ task.id }}</td>

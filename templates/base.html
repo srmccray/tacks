@@ -14,9 +14,9 @@
             <li><strong>Tacks</strong></li>
         </ul>
         <ul>
-            <li><a href="/tasks" hx-get="/tasks" hx-target="#main" hx-push-url="true">Issues</a></li>
-            <li><a href="/board" hx-get="/board" hx-target="#main" hx-push-url="true">Board</a></li>
-            <li><a href="/epics" hx-get="/epics" hx-target="#main" hx-push-url="true">Epics</a></li>
+            <li><a href="/tasks" hx-get="/tasks" hx-target="#main" hx-select="#main" hx-swap="outerHTML" hx-push-url="true">Issues</a></li>
+            <li><a href="/board" hx-get="/board" hx-target="#main" hx-select="#main" hx-swap="outerHTML" hx-push-url="true">Board</a></li>
+            <li><a href="/epics" hx-get="/epics" hx-target="#main" hx-select="#main" hx-swap="outerHTML" hx-push-url="true">Epics</a></li>
         </ul>
     </nav>
     <main class="container" id="main">
