@@ -2,3 +2,4 @@
 .tacks/
 *.db
 memory/
+.tack_docs/
