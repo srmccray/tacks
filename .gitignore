@@ -2,6 +2,7 @@
 .tacks/
 *.db
 memory/
+.claude/
 
 # Beads
 .beads/

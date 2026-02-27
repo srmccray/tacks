@@ -4,6 +4,10 @@ version = "0.1.0"
 edition = "2024"
 description = "Lightweight task manager for AI coding agents"
 license = "MIT"
+repository = "https://github.com/srmccray/tacks"
+keywords = ["task-manager", "cli", "ai-agent", "sqlite", "local"]
+categories = ["command-line-utilities", "development-tools"]
+exclude = [".claude/", "AGENTS.md", "CLAUDE.md", ".beads/", "memory/"]
 
 [[bin]]
 name = "tk"
