@@ -649,6 +649,16 @@ impl Database {
         Ok(format!("{parent_id}.{}", count + 1))
     }
 
+    /// Return the current SQLite `PRAGMA data_version` value.
+    ///
+    /// This integer increments whenever the database is modified by any connection,
+    /// making it suitable as a lightweight change-detection signal for polling clients.
+    pub fn data_version(&self) -> Result<i64, String> {
+        self.conn
+            .query_row("PRAGMA data_version", [], |row| row.get::<_, i64>(0))
+            .map_err(|e| format!("failed to read data_version: {e}"))
+    }
+
     pub fn get_children(&self, parent_id: &str) -> Result<Vec<Task>, String> {
         let mut stmt = self
             .conn

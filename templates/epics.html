@@ -3,6 +3,12 @@
 {% block title %}Epics — Tacks{% endblock %}
 
 {% block content %}
+<div id="content-area"
+     hx-get="/epics"
+     hx-trigger="every 2s [document.visibilityState === 'visible']"
+     hx-target="this"
+     hx-select="#content-area">
+
 <h1>Epics</h1>
 
 <table>
@@ -25,4 +31,5 @@
     {% endfor %}
   </tbody>
 </table>
+</div>
 {% endblock %}

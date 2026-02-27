@@ -7,12 +7,14 @@ use axum::{
     routing::{delete, get, post},
 };
 use rust_embed::Embed;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, atomic::AtomicI64};
 
 /// Shared application state for the web server.
 #[derive(Clone)]
 pub struct AppState {
     pub db: Arc<Mutex<Database>>,
+    /// Last known SQLite `PRAGMA data_version` value, used for polling-based live updates.
+    pub last_data_version: Arc<AtomicI64>,
 }
 
 pub mod errors;
@@ -78,6 +80,7 @@ pub fn create_router(state: AppState) -> Router {
         .route("/api/tasks/{id}/blockers", get(handlers::api_blockers))
         .route("/api/tasks/{id}/dependents", get(handlers::api_dependents))
         .route("/api/stats", get(handlers::api_stats))
+        .route("/api/poll", get(handlers::api_poll))
         .with_state(state)
 }
 
@@ -86,6 +89,7 @@ pub async fn serve(db_path: &std::path::Path, port: u16) -> Result<(), String> {
     let db = Database::open(db_path)?;
     let state = AppState {
         db: Arc::new(Mutex::new(db)),
+        last_data_version: Arc::new(AtomicI64::new(0)),
     };
     let app = create_router(state);
     let addr = format!("127.0.0.1:{port}");

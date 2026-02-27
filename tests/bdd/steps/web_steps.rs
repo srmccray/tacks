@@ -20,6 +20,7 @@ pub async fn start_test_server(world: &mut TacksWorld) -> u16 {
     let db = tacks::db::Database::open(&db_path).expect("failed to open database for web server");
     let state = tacks::web::AppState {
         db: std::sync::Arc::new(std::sync::Mutex::new(db)),
+        last_data_version: std::sync::Arc::new(std::sync::atomic::AtomicI64::new(0)),
     };
     let app = tacks::web::create_router(state);
 

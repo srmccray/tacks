@@ -5,6 +5,7 @@ use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse, Response};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
+use std::sync::atomic::Ordering;
 
 use crate::models::{Comment, Task, validate_close_reason};
 use crate::web::AppState;
@@ -583,6 +584,42 @@ pub async fn api_prime(State(state): State<AppState>) -> Result<impl IntoRespons
     .map_err(AppError::Internal)?;
 
     Ok(Json(result))
+}
+
+/// GET /api/poll — Lightweight change-detection endpoint for HTMX polling.
+///
+/// Compares the current SQLite `PRAGMA data_version` against the last known value
+/// stored in `AppState`. Returns:
+/// - `304 Not Modified` when nothing has changed (HTMX treats this as no-swap)
+/// - `200 OK` with `HX-Trigger: data-changed` header when data has changed
+pub async fn api_poll(State(state): State<AppState>) -> Response {
+    let db = state.db.clone();
+    let version = tokio::task::spawn_blocking(move || {
+        let db = db.lock().unwrap();
+        db.data_version()
+    })
+    .await;
+
+    let current = match version {
+        Ok(Ok(v)) => v,
+        _ => {
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    };
+
+    let last = state.last_data_version.load(Ordering::Relaxed);
+
+    if current == last {
+        StatusCode::NOT_MODIFIED.into_response()
+    } else {
+        state.last_data_version.store(current, Ordering::Relaxed);
+        (
+            StatusCode::OK,
+            [(axum_htmx::headers::HX_TRIGGER, "data-changed")],
+            "",
+        )
+            .into_response()
+    }
 }
 
 // ---------------------------------------------------------------------------

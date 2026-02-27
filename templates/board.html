@@ -3,6 +3,12 @@
 {% block title %}Board — Tacks{% endblock %}
 
 {% block content %}
+<div id="content-area"
+     hx-get="/board"
+     hx-trigger="every 2s [document.visibilityState === 'visible']"
+     hx-target="this"
+     hx-select="#content-area">
+
 <h1>Board</h1>
 
 <div class="grid">
@@ -38,5 +44,6 @@
     </article>
     {% endfor %}
   </div>
+</div>
 </div>
 {% endblock %}

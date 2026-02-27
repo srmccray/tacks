@@ -3,6 +3,12 @@
 {% block title %}Tasks — Tacks{% endblock %}
 
 {% block content %}
+<div id="content-area"
+     hx-get="/tasks"
+     hx-trigger="every 2s [document.visibilityState === 'visible']"
+     hx-target="this"
+     hx-select="#content-area">
+
 <h1>Tasks</h1>
 
 <form method="get" action="/tasks">
@@ -49,4 +55,5 @@
     {% endfor %}
   </tbody>
 </table>
+</div>
 {% endblock %}
