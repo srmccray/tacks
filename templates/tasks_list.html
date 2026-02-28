@@ -9,7 +9,7 @@
 
 <form method="get" action="/tasks"
       hx-get="/tasks"
-      hx-trigger="change from:select, keyup changed delay:300ms from:input"
+      hx-trigger="change from:select, change from:#tag-hidden-input, keyup changed delay:300ms from:input[name='search']"
       hx-target="#content-area"
       hx-select="#content-area"
       hx-swap="outerHTML"
@@ -28,7 +28,24 @@
       <option value="2" {% if priority_filter.as_deref() == Some("2") %}selected{% endif %}>P2</option>
       <option value="3" {% if priority_filter.as_deref() == Some("3") %}selected{% endif %}>P3</option>
     </select>
-    <input type="text" name="tag" placeholder="Filter by tag" value="{{ tag_filter.as_deref().unwrap_or_default() }}">
+    <div class="tag-autocomplete">
+      {% if tag_filter.is_some() %}
+      <span class="filter-tag-pill" id="active-tag-pill">
+        <span class="filter-tag-pill-text">{{ tag_filter.as_deref().unwrap_or_default() }}</span>
+        <button class="filter-tag-pill-remove" type="button" aria-label="Remove tag filter">&times;</button>
+      </span>
+      {% else %}
+      <span class="filter-tag-pill" id="active-tag-pill" style="display:none">
+        <span class="filter-tag-pill-text"></span>
+        <button class="filter-tag-pill-remove" type="button" aria-label="Remove tag filter">&times;</button>
+      </span>
+      {% endif %}
+      <input type="text" class="tag-text-input" placeholder="Filter by tag" autocomplete="off"
+             {% if tag_filter.is_some() %}style="display:none"{% endif %}>
+      <input type="hidden" name="tag" value="{{ tag_filter.as_deref().unwrap_or_default() }}" id="tag-hidden-input">
+      <ul class="tag-suggestions" id="tag-suggestions"></ul>
+    </div>
+    <input type="text" name="search" placeholder="Search titles..." value="{{ search_filter.as_deref().unwrap_or_default() }}">
     <noscript><button type="submit">Filter</button></noscript>
   </div>
 </form>

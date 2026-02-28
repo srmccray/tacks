@@ -1,7 +1,8 @@
 /* Tacks custom component styles */
 
 /* Override Pico CSS primary/accent color: blue → purple */
-:root {
+/* Must match Pico's specificity: :root:not([data-theme="dark"]) > :root */
+:root:not([data-theme="dark"]) {
   --pico-primary: #7c3aed;
   --pico-primary-background: #7c3aed;
   --pico-primary-border: var(--pico-primary-background);
@@ -97,6 +98,118 @@
 [data-theme="dark"] .tag-pill {
   border-color: var(--pico-muted-border-color, #374151);
   color: var(--pico-muted-color, #9ca3af);
+}
+
+/* Tag autocomplete widget */
+.tag-autocomplete {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  /* Match Pico input height so grid row stays even */
+  min-height: calc(var(--pico-form-element-spacing-vertical, 0.75rem) * 2 + 1.25em + 2px);
+  border: 1px solid var(--pico-form-element-border-color, #767676);
+  border-radius: var(--pico-border-radius, 0.25rem);
+  padding: 0.3em 0.6em;
+  background-color: var(--pico-form-element-background-color, #fff);
+  cursor: text;
+  flex-wrap: wrap;
+}
+
+.tag-autocomplete:focus-within {
+  border-color: var(--pico-primary);
+  box-shadow: 0 0 0 2px var(--pico-primary-focus, rgba(124,58,237,0.375));
+  outline: none;
+}
+
+.tag-text-input {
+  border: none !important;
+  outline: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  flex: 1;
+  min-width: 6em;
+  font-size: inherit;
+}
+
+/* Filter tag pill (inside the autocomplete widget) */
+.filter-tag-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
+  border-radius: 1em;
+  padding: 0.1em 0.5em;
+  font-size: 0.8em;
+  font-weight: 600;
+  white-space: nowrap;
+  background-color: color-mix(in srgb, var(--pico-primary, #7c3aed) 15%, transparent);
+  color: var(--pico-primary, #7c3aed);
+  border: 1px solid color-mix(in srgb, var(--pico-primary, #7c3aed) 40%, transparent);
+}
+
+.filter-tag-pill-remove {
+  all: unset;
+  cursor: pointer;
+  line-height: 1;
+  font-size: 1.1em;
+  opacity: 0.7;
+}
+
+.filter-tag-pill-remove:hover {
+  opacity: 1;
+}
+
+/* Autocomplete suggestions dropdown */
+.tag-suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  list-style: none;
+  margin: 0;
+  padding: 0.25em 0;
+  background-color: var(--pico-card-background-color, #fff);
+  border: 1px solid var(--pico-muted-border-color, #d1d5db);
+  border-radius: var(--pico-border-radius, 0.25rem);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  z-index: 100;
+  max-height: 14em;
+  overflow-y: auto;
+}
+
+.tag-suggestions[hidden] {
+  display: none;
+}
+
+.tag-suggestions li {
+  padding: 0.35em 0.75em;
+  cursor: pointer;
+  font-size: 0.9em;
+  color: var(--pico-color, inherit);
+}
+
+.tag-suggestions li:hover,
+.tag-suggestions li.active {
+  background-color: color-mix(in srgb, var(--pico-primary, #7c3aed) 12%, transparent);
+  color: var(--pico-primary, #7c3aed);
+}
+
+[data-theme="dark"] .tag-suggestions {
+  background-color: var(--pico-card-background-color, #1e1e2e);
+  border-color: var(--pico-muted-border-color, #374151);
+}
+
+[data-theme="dark"] .tag-autocomplete {
+  background-color: var(--pico-form-element-background-color, #1e1e2e);
+  border-color: var(--pico-form-element-border-color, #4a4a6a);
+}
+
+[data-theme="dark"] .filter-tag-pill {
+  background-color: color-mix(in srgb, var(--pico-primary, #a78bfa) 25%, transparent);
+  color: var(--pico-primary, #a78bfa);
+  border-color: color-mix(in srgb, var(--pico-primary, #a78bfa) 50%, transparent);
 }
 
 /* Priority badges — light theme */

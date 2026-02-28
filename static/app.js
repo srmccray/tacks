@@ -195,6 +195,191 @@
     }
   });
 
+  // --- Tag autocomplete ---
+
+  // Cached tag list — fetched once, reused across re-inits (survives HTMX swaps)
+  var cachedTags = null;
+
+  function fetchTags(cb) {
+    if (cachedTags !== null) {
+      cb(cachedTags);
+      return;
+    }
+    fetch('/api/tags')
+      .then(function (r) { return r.json(); })
+      .then(function (tags) {
+        cachedTags = tags;
+        cb(tags);
+      })
+      .catch(function () { cb([]); });
+  }
+
+  function initTagAutocomplete() {
+    var wrapper = document.querySelector('.tag-autocomplete');
+    if (!wrapper) return;
+
+    var textInput = wrapper.querySelector('.tag-text-input');
+    var hiddenInput = wrapper.querySelector('input[name="tag"]');
+    var pill = wrapper.querySelector('.filter-tag-pill');
+    var pillText = wrapper.querySelector('.filter-tag-pill-text');
+    var pillRemove = wrapper.querySelector('.filter-tag-pill-remove');
+    var suggList = wrapper.querySelector('.tag-suggestions');
+
+    if (!textInput || !hiddenInput || !pill || !suggList) return;
+
+    var activeIdx = -1;
+
+    function getSuggestions() {
+      return Array.from(suggList.querySelectorAll('li'));
+    }
+
+    function closeSuggestions() {
+      suggList.setAttribute('hidden', '');
+      suggList.innerHTML = '';
+      activeIdx = -1;
+    }
+
+    function showSuggestions(matches) {
+      suggList.innerHTML = '';
+      activeIdx = -1;
+      if (matches.length === 0) {
+        closeSuggestions();
+        return;
+      }
+      matches.forEach(function (tag) {
+        var li = document.createElement('li');
+        li.textContent = tag;
+        li.addEventListener('mousedown', function (e) {
+          // mousedown fires before blur; prevent blur from closing the list
+          e.preventDefault();
+          selectTag(tag);
+        });
+        suggList.appendChild(li);
+      });
+      suggList.removeAttribute('hidden');
+    }
+
+    function highlightActive(items) {
+      items.forEach(function (li, i) {
+        if (i === activeIdx) {
+          li.classList.add('active');
+        } else {
+          li.classList.remove('active');
+        }
+      });
+    }
+
+    function selectTag(tag) {
+      // Show the pill
+      if (pillText) pillText.textContent = tag;
+      pill.style.display = '';
+      // Hide the text input
+      textInput.style.display = 'none';
+      textInput.value = '';
+      // Set hidden input and fire change to trigger HTMX
+      hiddenInput.value = tag;
+      hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
+      closeSuggestions();
+    }
+
+    function clearTag() {
+      pill.style.display = 'none';
+      if (pillText) pillText.textContent = '';
+      textInput.style.display = '';
+      textInput.value = '';
+      hiddenInput.value = '';
+      hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
+      closeSuggestions();
+    }
+
+    // Clicking the wrapper focuses the text input
+    wrapper.addEventListener('click', function (e) {
+      if (!e.target.closest('.filter-tag-pill')) {
+        textInput.focus();
+      }
+    });
+
+    // Remove pill button
+    pillRemove.addEventListener('click', function (e) {
+      e.preventDefault();
+      clearTag();
+      textInput.focus();
+    });
+
+    // Text input: filter suggestions on input
+    textInput.addEventListener('input', function () {
+      var query = textInput.value.trim().toLowerCase();
+      if (query.length === 0) {
+        closeSuggestions();
+        return;
+      }
+      fetchTags(function (tags) {
+        var matches = tags.filter(function (t) {
+          return t.toLowerCase().includes(query);
+        });
+        showSuggestions(matches);
+      });
+    });
+
+    // Pre-fetch on focus so suggestions are ready
+    textInput.addEventListener('focus', function () {
+      fetchTags(function () {}); // warm the cache silently
+    });
+
+    // Keyboard navigation in the suggestions list
+    textInput.addEventListener('keydown', function (e) {
+      var items = getSuggestions();
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (items.length === 0 && textInput.value.trim()) {
+          // Try to show suggestions if not visible
+          fetchTags(function (tags) {
+            var q = textInput.value.trim().toLowerCase();
+            showSuggestions(tags.filter(function (t) { return t.toLowerCase().includes(q); }));
+          });
+          return;
+        }
+        activeIdx = Math.min(activeIdx + 1, items.length - 1);
+        highlightActive(items);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        activeIdx = Math.max(activeIdx - 1, -1);
+        highlightActive(items);
+      } else if (e.key === 'Tab' || e.key === 'Enter') {
+        if (items.length > 0) {
+          e.preventDefault();
+          var chosen = activeIdx >= 0 ? items[activeIdx] : items[0];
+          selectTag(chosen.textContent);
+        }
+      } else if (e.key === 'Escape') {
+        closeSuggestions();
+        textInput.blur();
+      }
+    });
+
+    // Close suggestions when clicking outside
+    document.addEventListener('click', function (e) {
+      if (!wrapper.contains(e.target)) {
+        closeSuggestions();
+      }
+    });
+  }
+
+  // Initialize on DOMContentLoaded and after HTMX settles (full content swaps)
+  document.addEventListener('DOMContentLoaded', initTagAutocomplete);
+  document.addEventListener('htmx:afterSettle', function (e) {
+    // Re-init only when the content-area or a parent was swapped (not tbody polling)
+    var target = e.detail.target;
+    if (
+      target &&
+      (target.id === 'content-area' ||
+        target.id === 'main' ||
+        target.querySelector && target.querySelector('.tag-autocomplete'))
+    ) {
+      initTagAutocomplete();
+    }
+  });
+
   // --- Global keydown handler ---
 
   document.addEventListener('keydown', function (e) {
@@ -237,8 +422,12 @@
 
     if (key === '/') {
       e.preventDefault();
-      var tagInput = document.querySelector('input[name="tag"]');
-      if (tagInput) tagInput.focus();
+      // Focus the visible tag text input (autocomplete); fall back to hidden input name="tag"
+      var tagInput = document.querySelector('.tag-text-input') || document.querySelector('input[name="tag"]');
+      if (tagInput) {
+        tagInput.style.display = '';
+        tagInput.focus();
+      }
       return;
     }
 

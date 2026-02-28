@@ -61,6 +61,7 @@ pub fn create_router(state: AppState) -> Router {
         )
         .route("/api/tasks/ready", get(handlers::api_ready_tasks))
         .route("/api/tasks/blocked", get(handlers::api_blocked_tasks))
+        .route("/api/tags", get(handlers::api_tags))
         .route("/api/epics", get(handlers::api_epics))
         .route("/api/prime", get(handlers::api_prime))
         .route(
