@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}{{ task.title }} — Epic — Tacks{% endblock %}
+
+{% block content %}
+<div id="content-area"
+     hx-get="/epics/{{ task.id }}"
+     hx-trigger="every 2s [document.visibilityState === 'visible']"
+     hx-target="this"
+     hx-select="#content-area">
+
+<p><a href="/epics">&#8592; Back to epics</a></p>
+
+<h1>{{ task.title }}</h1>
+
+<dl>
+  <dt>ID</dt>
+  <dd>{{ task.id }}</dd>
+  <dt>Status</dt>
+  <dd>
+    <span class="badge status-{{ task.status }}">
+      {%- if task.status == crate::models::Status::Open -%}
+        Open
+      {%- else if task.status == crate::models::Status::InProgress -%}
+        In Progress
+      {%- else if task.status == crate::models::Status::Done -%}
+        Done
+      {%- else -%}
+        Blocked
+      {%- endif -%}
+    </span>
+  </dd>
+  <dt>Priority</dt>
+  <dd class="priority-{{ task.priority }}">P{{ task.priority }}</dd>
+  {% if let Some(assignee) = task.assignee.as_deref() %}
+  <dt>Assignee</dt>
+  <dd>{{ assignee }}</dd>
+  {% endif %}
+  {% if let Some(desc) = task.description.as_deref() %}
+  <dt>Description</dt>
+  <dd>{{ desc }}</dd>
+  {% endif %}
+  {% if !task.tags.is_empty() %}
+  <dt>Tags</dt>
+  <dd>
+    {% for tag in &task.tags %}
+      <span class="tag-pill">{{ tag }}</span>
+    {% endfor %}
+  </dd>
+  {% endif %}
+  <dt>Progress</dt>
+  <dd>{{ children_done }}/{{ children_total }} done</dd>
+</dl>
+
+<h2>Tasks</h2>
+
+{% if children.is_empty() %}
+<p>No subtasks yet.</p>
+{% else %}
+<table>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Title</th>
+      <th>Status</th>
+      <th>Priority</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for child in &children %}
+    <tr>
+      <td><a href="/tasks/{{ child.id }}" hx-select="unset">{{ child.id }}</a></td>
+      <td>{{ child.title }}</td>
+      <td>
+        <span class="badge status-{{ child.status }}">
+          {%- if child.status == crate::models::Status::Open -%}Open
+          {%- else if child.status == crate::models::Status::InProgress -%}In Progress
+          {%- else if child.status == crate::models::Status::Done -%}Done
+          {%- else -%}Blocked{%- endif -%}
+        </span>
+      </td>
+      <td class="priority-{{ child.priority }}">P{{ child.priority }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+</div>
+{% endblock %}

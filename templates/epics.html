@@ -23,8 +23,8 @@
   <tbody>
     {% for ep in epics %}
     <tr>
-      <td>{{ ep.task.id }}</td>
-      <td><a href="/tasks/{{ ep.task.id }}">{{ ep.task.title }}</a></td>
+      <td><a href="/epics/{{ ep.task.id }}">{{ ep.task.id }}</a></td>
+      <td>{{ ep.task.title }}</td>
       <td><span class="badge status-{{ ep.task.status }}">
         {%- if ep.task.status == crate::models::Status::Open -%}Open
         {%- else if ep.task.status == crate::models::Status::InProgress -%}In Progress

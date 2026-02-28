@@ -710,6 +710,16 @@ struct EpicsTemplate {
     epics: Vec<EpicRow>,
 }
 
+/// Template for the epic detail page at GET /epics/:id.
+#[derive(Template)]
+#[template(path = "epic_detail.html")]
+struct EpicDetailTemplate {
+    task: Task,
+    children: Vec<Task>,
+    children_done: usize,
+    children_total: usize,
+}
+
 /// Template for the create task form at GET /tasks/new.
 #[derive(Template)]
 #[template(path = "task_new.html")]
@@ -904,6 +914,43 @@ pub async fn epics(State(state): State<AppState>) -> Response {
 
     match result {
         Ok(epics) => render_template(EpicsTemplate { epics }),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("database error: {e}"),
+        )
+            .into_response(),
+    }
+}
+
+/// GET /epics/:id — Epic detail page with children task list (200 or 404).
+pub async fn epic_detail(State(state): State<AppState>, Path(id): Path<String>) -> Response {
+    let db = state.db.clone();
+    let result =
+        tokio::task::spawn_blocking(move || -> Result<Option<EpicDetailTemplate>, String> {
+            let db = db.lock().unwrap();
+            let task = match db.get_task(&id)? {
+                Some(t) => t,
+                None => return Ok(None),
+            };
+            let children = db.get_children(&id)?;
+            let children_total = children.len();
+            let children_done = children
+                .iter()
+                .filter(|c| matches!(c.status, crate::models::Status::Done))
+                .count();
+            Ok(Some(EpicDetailTemplate {
+                task,
+                children,
+                children_done,
+                children_total,
+            }))
+        })
+        .await
+        .unwrap();
+
+    match result {
+        Ok(Some(tmpl)) => render_template(tmpl),
+        Ok(None) => (StatusCode::NOT_FOUND, "epic not found").into_response(),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("database error: {e}"),

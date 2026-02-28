@@ -52,6 +52,7 @@ pub fn create_router(state: AppState) -> Router {
         .route("/tasks", get(handlers::task_list))
         .route("/board", get(handlers::board))
         .route("/epics", get(handlers::epics))
+        .route("/epics/{id}", get(handlers::epic_detail))
         .route("/static/{*path}", get(static_handler))
         // API routes — specific routes before parameterized ones
         .route(
