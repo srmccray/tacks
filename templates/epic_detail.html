@@ -4,7 +4,7 @@
 
 {% block content %}
 <div id="content-area"
-     hx-get="/epics/{{ task.id }}"
+     hx-get="/epics/{{ task.id }}?view={{ view }}"
      hx-trigger="every 2s [document.visibilityState === 'visible']"
      hx-target="this"
      hx-select="#content-area">
@@ -52,7 +52,21 @@
   <dd>{{ children_done }}/{{ children_total }} done</dd>
 </dl>
 
+<nav class="view-toggle" style="margin-bottom: 1rem;">
+  {% if view == "list" %}
+  <strong>List</strong>
+  &nbsp;|&nbsp;
+  <a href="/epics/{{ task.id }}?view=board">Board</a>
+  {% else %}
+  <a href="/epics/{{ task.id }}?view=list">List</a>
+  &nbsp;|&nbsp;
+  <strong>Board</strong>
+  {% endif %}
+</nav>
+
 <h2>Tasks</h2>
+
+{% if view == "list" %}
 
 {% if children.is_empty() %}
 <p>No subtasks yet.</p>
@@ -84,6 +98,73 @@
     {% endfor %}
   </tbody>
 </table>
+{% endif %}
+
+{% else %}
+
+{% if children.is_empty() %}
+<p>No subtasks yet.</p>
+{% else %}
+<div class="grid">
+  <div>
+    <h3>Open</h3>
+    {% for child in &children %}
+    {%- if child.status == crate::models::Status::Open -%}
+    <article>
+      <a href="/tasks/{{ child.id }}"
+         hx-get="/tasks/{{ child.id }}"
+         hx-target="#task-modal"
+         hx-select="unset"
+         hx-swap="innerHTML">{{ child.title }}</a>
+    </article>
+    {%- endif -%}
+    {% endfor %}
+  </div>
+  <div>
+    <h3>In Progress</h3>
+    {% for child in &children %}
+    {%- if child.status == crate::models::Status::InProgress -%}
+    <article>
+      <a href="/tasks/{{ child.id }}"
+         hx-get="/tasks/{{ child.id }}"
+         hx-target="#task-modal"
+         hx-select="unset"
+         hx-swap="innerHTML">{{ child.title }}</a>
+    </article>
+    {%- endif -%}
+    {% endfor %}
+  </div>
+  <div>
+    <h3>Blocked</h3>
+    {% for child in &children %}
+    {%- if child.status == crate::models::Status::Blocked -%}
+    <article>
+      <a href="/tasks/{{ child.id }}"
+         hx-get="/tasks/{{ child.id }}"
+         hx-target="#task-modal"
+         hx-select="unset"
+         hx-swap="innerHTML">{{ child.title }}</a>
+    </article>
+    {%- endif -%}
+    {% endfor %}
+  </div>
+  <div>
+    <h3>Done</h3>
+    {% for child in &children %}
+    {%- if child.status == crate::models::Status::Done -%}
+    <article>
+      <a href="/tasks/{{ child.id }}"
+         hx-get="/tasks/{{ child.id }}"
+         hx-target="#task-modal"
+         hx-select="unset"
+         hx-swap="innerHTML">{{ child.title }}</a>
+    </article>
+    {%- endif -%}
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
 {% endif %}
 
 </div>

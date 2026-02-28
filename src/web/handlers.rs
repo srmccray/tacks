@@ -718,6 +718,14 @@ struct EpicDetailTemplate {
     children: Vec<Task>,
     children_done: usize,
     children_total: usize,
+    /// Current view mode: "list" (default) or "board".
+    view: String,
+}
+
+/// Query parameters for GET /epics/:id.
+#[derive(Debug, Deserialize)]
+pub struct EpicDetailQuery {
+    pub view: Option<String>,
 }
 
 /// Template for the create task form at GET /tasks/new.
@@ -923,7 +931,18 @@ pub async fn epics(State(state): State<AppState>) -> Response {
 }
 
 /// GET /epics/:id — Epic detail page with children task list (200 or 404).
-pub async fn epic_detail(State(state): State<AppState>, Path(id): Path<String>) -> Response {
+pub async fn epic_detail(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    Query(query): Query<EpicDetailQuery>,
+) -> Response {
+    // Normalise view param: accept "board", default to "list" for anything else.
+    let view = match query.view.as_deref() {
+        Some("board") => "board".to_string(),
+        _ => "list".to_string(),
+    };
+    let view_clone = view.clone();
+
     let db = state.db.clone();
     let result =
         tokio::task::spawn_blocking(move || -> Result<Option<EpicDetailTemplate>, String> {
@@ -943,6 +962,7 @@ pub async fn epic_detail(State(state): State<AppState>, Path(id): Path<String>) 
                 children,
                 children_done,
                 children_total,
+                view: view_clone,
             }))
         })
         .await
