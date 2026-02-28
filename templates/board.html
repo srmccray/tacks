@@ -3,15 +3,39 @@
 {% block title %}Board — Tacks{% endblock %}
 
 {% block content %}
-<div id="content-area"
-     hx-get="/board"
-     hx-trigger="every 2s [document.visibilityState === 'visible']"
-     hx-target="this"
-     hx-select="#content-area">
+<div id="content-area">
 
 <h1>Board</h1>
 
-<div class="grid">
+<form method="get" action="/board"
+      hx-get="/board"
+      hx-trigger="change from:select"
+      hx-target="#content-area"
+      hx-select="#content-area"
+      hx-swap="outerHTML"
+      hx-push-url="true">
+  <div class="grid">
+    <select name="epic">
+      <option value="">All tasks</option>
+      {% for epic in epics %}
+      <option value="{{ epic.id }}" {% if selected_epic == epic.id %}selected{% endif %}>{{ epic.title }}</option>
+      {% endfor %}
+    </select>
+    <select name="priority">
+      <option value="">All priorities</option>
+      <option value="1" {% if selected_priority == "1" %}selected{% endif %}>P1</option>
+      <option value="2" {% if selected_priority == "2" %}selected{% endif %}>P2</option>
+      <option value="3" {% if selected_priority == "3" %}selected{% endif %}>P3</option>
+    </select>
+    <noscript><button type="submit">Filter</button></noscript>
+  </div>
+</form>
+
+<div class="grid" id="board-columns"
+     hx-get="/board{{ poll_query }}"
+     hx-trigger="every 2s [document.visibilityState === 'visible']"
+     hx-target="#board-columns"
+     hx-select="#board-columns">
   <div>
     <h2>Open</h2>
     {% for task in open_tasks %}

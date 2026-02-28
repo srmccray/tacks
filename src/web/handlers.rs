@@ -118,6 +118,8 @@ pub struct ListTasksQuery {
     pub all: Option<bool>,
     #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub parent: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
+    pub search: Option<String>,
 }
 
 /// Query parameters for GET /api/tasks/ready.
@@ -217,6 +219,7 @@ pub async fn api_list_tasks(
     let priority_filter = query.priority;
     let tag_filter = query.tag.clone();
     let parent_filter = query.parent.clone();
+    let search_filter = query.search.clone();
 
     let db = state.db.clone();
     let tasks = tokio::task::spawn_blocking(move || {
@@ -227,6 +230,7 @@ pub async fn api_list_tasks(
             priority_filter,
             tag_filter.as_deref(),
             parent_filter.as_deref(),
+            search_filter.as_deref(),
         )
     })
     .await
@@ -535,7 +539,7 @@ pub async fn api_epics(State(state): State<AppState>) -> Result<impl IntoRespons
     let result: Vec<EpicProgress> =
         tokio::task::spawn_blocking(move || -> Result<Vec<EpicProgress>, String> {
             let db = db.lock().unwrap();
-            let epics = db.list_tasks(true, None, None, Some("epic"), None)?;
+            let epics = db.list_tasks(true, None, None, Some("epic"), None, None)?;
             let mut out = Vec::with_capacity(epics.len());
             for epic in epics {
                 let children = db.get_children(&epic.id)?;
@@ -598,7 +602,7 @@ pub async fn api_prime(State(state): State<AppState>) -> Result<impl IntoRespons
             by_tag,
         };
 
-        let in_progress = db.list_tasks(false, Some("in_progress"), None, None, None)?;
+        let in_progress = db.list_tasks(false, Some("in_progress"), None, None, None, None)?;
         let ready = db.get_ready_tasks(Some(5))?;
 
         Ok(PrimeResponse {
@@ -662,6 +666,7 @@ struct TaskListTemplate {
     status_filter: Option<String>,
     priority_filter: Option<String>,
     tag_filter: Option<String>,
+    search_filter: Option<String>,
     /// Pre-built query string for HTMX polling (preserves current filters).
     poll_query: String,
 }
@@ -694,6 +699,23 @@ struct BoardTemplate {
     in_progress_tasks: Vec<Task>,
     blocked_tasks: Vec<Task>,
     done_tasks: Vec<Task>,
+    /// All epics available in the dropdown filter.
+    epics: Vec<Task>,
+    /// Currently selected epic ID filter (empty string = none).
+    selected_epic: String,
+    /// Currently selected priority filter (empty string = none).
+    selected_priority: String,
+    /// Pre-built query string for HTMX polling (preserves current filters).
+    poll_query: String,
+}
+
+/// Query parameters for GET /board.
+#[derive(Debug, Deserialize)]
+pub struct BoardQuery {
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
+    pub epic: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_optional_u8")]
+    pub priority: Option<u8>,
 }
 
 /// Template struct for one row in the epics view.
@@ -734,7 +756,12 @@ pub struct EpicDetailQuery {
 struct TaskNewTemplate;
 
 /// Build a query string from current filter params for HTMX polling.
-fn build_poll_query(status: &Option<String>, priority: Option<u8>, tag: &Option<String>) -> String {
+fn build_poll_query(
+    status: &Option<String>,
+    priority: Option<u8>,
+    tag: &Option<String>,
+    search: &Option<String>,
+) -> String {
     let mut parts = Vec::new();
     if let Some(s) = status {
         parts.push(format!("status={s}"));
@@ -744,6 +771,9 @@ fn build_poll_query(status: &Option<String>, priority: Option<u8>, tag: &Option<
     }
     if let Some(t) = tag {
         parts.push(format!("tag={t}"));
+    }
+    if let Some(q) = search {
+        parts.push(format!("search={q}"));
     }
     if parts.is_empty() {
         String::new()
@@ -757,11 +787,15 @@ pub async fn task_list(
     State(state): State<AppState>,
     Query(params): Query<ListTasksQuery>,
 ) -> Response {
-    let has_filter = params.status.is_some() || params.priority.is_some() || params.tag.is_some();
+    let has_filter = params.status.is_some()
+        || params.priority.is_some()
+        || params.tag.is_some()
+        || params.search.is_some();
     let show_all = has_filter || params.all.unwrap_or(false);
     let status_filter = params.status.clone();
     let priority_filter = params.priority;
     let tag_filter = params.tag.clone();
+    let search_filter = params.search.clone();
 
     let db = state.db.clone();
     let tasks = tokio::task::spawn_blocking(move || {
@@ -772,19 +806,21 @@ pub async fn task_list(
             priority_filter,
             tag_filter.as_deref(),
             None,
+            search_filter.as_deref(),
         )
     })
     .await
     .unwrap()
     .unwrap_or_default();
 
-    let poll_query = build_poll_query(&params.status, params.priority, &params.tag);
+    let poll_query = build_poll_query(&params.status, params.priority, &params.tag, &params.search);
 
     render_template(TaskListTemplate {
         tasks,
         status_filter: params.status,
         priority_filter: params.priority.map(|p| p.to_string()),
         tag_filter: params.tag,
+        search_filter: params.search,
         poll_query,
     })
 }
@@ -866,20 +902,65 @@ pub async fn task_detail(
     }
 }
 
-/// GET /board — Kanban board view grouped by status.
-pub async fn board(State(state): State<AppState>) -> Response {
+/// Build a poll query string for the board view (preserves epic + priority filters).
+fn build_board_poll_query(epic: &Option<String>, priority: Option<u8>) -> String {
+    let mut parts = Vec::new();
+    if let Some(e) = epic {
+        parts.push(format!("epic={e}"));
+    }
+    if let Some(p) = priority {
+        parts.push(format!("priority={p}"));
+    }
+    if parts.is_empty() {
+        String::new()
+    } else {
+        format!("?{}", parts.join("&"))
+    }
+}
+
+/// GET /board — Kanban board view grouped by status, with optional epic and priority filters.
+pub async fn board(State(state): State<AppState>, Query(query): Query<BoardQuery>) -> Response {
+    let epic_filter = query.epic.clone();
+    let priority_filter = query.priority;
+
     let db = state.db.clone();
     let result = tokio::task::spawn_blocking(move || -> Result<BoardTemplate, String> {
         let db = db.lock().unwrap();
-        let open_tasks = db.list_tasks(false, Some("open"), None, None, None)?;
-        let in_progress_tasks = db.list_tasks(false, Some("in_progress"), None, None, None)?;
-        let blocked_tasks = db.list_tasks(false, Some("blocked"), None, None, None)?;
-        let done_tasks = db.list_tasks(true, Some("done"), None, None, None)?;
+
+        // Fetch all epics for the dropdown.
+        let epics = db.list_tasks(true, None, None, Some("epic"), None, None)?;
+
+        // Helper: fetch tasks for a given status, applying epic and priority filters.
+        let fetch = |status: &str, show_done: bool| -> Result<Vec<Task>, String> {
+            let parent_filter = epic_filter.as_deref();
+            db.list_tasks(
+                show_done,
+                Some(status),
+                priority_filter,
+                None,
+                parent_filter,
+                None,
+            )
+        };
+
+        let open_tasks = fetch("open", false)?;
+        let in_progress_tasks = fetch("in_progress", false)?;
+        let blocked_tasks = fetch("blocked", false)?;
+        let done_tasks = fetch("done", true)?;
+
+        let selected_epic = epic_filter.clone().unwrap_or_default();
+        let selected_priority = priority_filter.map(|p| p.to_string()).unwrap_or_default();
+        let poll_query = build_board_poll_query(&epic_filter, priority_filter);
+
         Ok(BoardTemplate {
             open_tasks,
             in_progress_tasks,
             blocked_tasks,
             done_tasks,
+            epics,
+            selected_epic,
+            selected_priority,
+            poll_query,
         })
     })
     .await
@@ -900,7 +981,7 @@ pub async fn epics(State(state): State<AppState>) -> Response {
     let db = state.db.clone();
     let result = tokio::task::spawn_blocking(move || -> Result<Vec<EpicRow>, String> {
         let db = db.lock().unwrap();
-        let epic_tasks = db.list_tasks(true, None, None, Some("epic"), None)?;
+        let epic_tasks = db.list_tasks(true, None, None, Some("epic"), None, None)?;
         let mut rows = Vec::with_capacity(epic_tasks.len());
         for task in epic_tasks {
             let children = db.get_children(&task.id)?;
@@ -977,6 +1058,23 @@ pub async fn epic_detail(
         )
             .into_response(),
     }
+}
+
+/// GET /api/tags — Unique tag names sorted by usage count descending (200).
+pub async fn api_tags(State(state): State<AppState>) -> Result<impl IntoResponse, AppError> {
+    let db = state.db.clone();
+    let tags: Vec<String> = tokio::task::spawn_blocking(move || {
+        let db = db.lock().unwrap();
+        db.task_count_by_tag()
+    })
+    .await
+    .map_err(|e| AppError::Internal(e.to_string()))?
+    .map_err(AppError::Internal)?
+    .into_iter()
+    .map(|(tag, _count)| tag)
+    .collect();
+
+    Ok(Json(tags))
 }
 
 /// GET /api/stats — Task statistics (200).
