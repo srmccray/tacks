@@ -1,10 +1,12 @@
 <article>
   <header>
-    <h3>{{ task.title }}</h3>
+    <h3>{{ task.id }}</h3>
     <button aria-label="Close" rel="prev" onclick="document.getElementById('task-modal').close()"></button>
   </header>
 
   <dl>
+    <dt>Title</dt>
+    <dd>{{ task.title }}</dd>
     <dt>Status</dt>
     <dd>
       <span class="badge status-{{ task.status }}">
@@ -34,9 +36,9 @@
     </dd>
     {% endif %}
     <dt>Created</dt>
-    <dd>{{ task.created_at }}</dd>
+    <dd>{{ task.created_at.format("%b %d, %Y %H:%M") }}</dd>
     <dt>Updated</dt>
-    <dd>{{ task.updated_at }}</dd>
+    <dd>{{ task.updated_at.format("%b %d, %Y %H:%M") }}</dd>
   </dl>
 
   {% if let Some(desc) = task.description.as_deref() %}
@@ -73,7 +75,7 @@
     <h4>Comments</h4>
     {% for comment in comments %}
     <article>
-      <small>{{ comment.created_at }}</small>
+      <small>{{ comment.created_at.format("%b %d, %Y %H:%M") }}</small>
       <p>{{ comment.body }}</p>
     </article>
     {% endfor %}
