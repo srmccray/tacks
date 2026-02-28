@@ -50,21 +50,21 @@
          hx-swap="outerHTML">
     {% for task in tasks %}
     <tr tabindex="-1" data-href="/tasks/{{ task.id }}">
-      <td>{{ task.id }}</td>
       <td><a href="/tasks/{{ task.id }}"
              hx-get="/tasks/{{ task.id }}"
              hx-target="#task-modal"
              hx-select="unset"
-             hx-swap="innerHTML">{{ task.title }}</a></td>
+             hx-swap="innerHTML">{{ task.id }}</a></td>
+      <td>{{ task.title }}</td>
       <td><span class="badge status-{{ task.status }}">
         {%- if task.status == crate::models::Status::Open -%}Open
         {%- else if task.status == crate::models::Status::InProgress -%}In Progress
         {%- else if task.status == crate::models::Status::Done -%}Done
         {%- else -%}Blocked{%- endif -%}
       </span></td>
-      <td>{{ task.priority }}</td>
+      <td><span class="badge priority-{{ task.priority }}">P{{ task.priority }}</span></td>
       <td>{% for tag in task.tags %}<span class="tag-pill">{{ tag }}</span> {% endfor %}</td>
-      <td>{{ task.updated_at }}</td>
+      <td>{{ task.updated_at.format("%b %d, %Y %H:%M") }}</td>
     </tr>
     {% endfor %}
   </tbody>

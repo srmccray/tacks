@@ -31,7 +31,7 @@
     </span>
   </dd>
   <dt>Priority</dt>
-  <dd class="priority-{{ task.priority }}">P{{ task.priority }}</dd>
+  <dd><span class="badge priority-{{ task.priority }}">P{{ task.priority }}</span></dd>
   {% if let Some(assignee) = task.assignee.as_deref() %}
   <dt>Assignee</dt>
   <dd>{{ assignee }}</dd>
@@ -93,7 +93,7 @@
           {%- else -%}Blocked{%- endif -%}
         </span>
       </td>
-      <td class="priority-{{ child.priority }}">P{{ child.priority }}</td>
+      <td><span class="badge priority-{{ child.priority }}">P{{ child.priority }}</span></td>
     </tr>
     {% endfor %}
   </tbody>

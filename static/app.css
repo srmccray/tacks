@@ -72,15 +72,30 @@
   color: var(--pico-muted-color, #9ca3af);
 }
 
-/* Priority emphasis */
-.priority-1 {
-  font-weight: 700;
+/* Priority badges — light theme */
+.badge.priority-1 {
+  background-color: color-mix(in srgb, #ef4444 15%, transparent);
+  color: #b91c1c;
+}
+.badge.priority-2 {
+  background-color: color-mix(in srgb, #3b82f6 15%, transparent);
+  color: #2563eb;
+}
+.badge.priority-3 {
+  background-color: color-mix(in srgb, #6b7280 15%, transparent);
+  color: #4b5563;
 }
 
-.priority-2 {
-  font-weight: 400;
+/* Priority badges — dark theme */
+[data-theme="dark"] .badge.priority-1 {
+  background-color: color-mix(in srgb, #ef4444 25%, transparent);
+  color: #f87171;
 }
-
-.priority-3 {
-  opacity: 0.65;
+[data-theme="dark"] .badge.priority-2 {
+  background-color: color-mix(in srgb, #3b82f6 25%, transparent);
+  color: #60a5fa;
+}
+[data-theme="dark"] .badge.priority-3 {
+  background-color: color-mix(in srgb, #6b7280 25%, transparent);
+  color: #9ca3af;
 }

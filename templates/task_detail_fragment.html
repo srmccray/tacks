@@ -22,7 +22,7 @@
       </span>
     </dd>
     <dt>Priority</dt>
-    <dd class="priority-{{ task.priority }}">P{{ task.priority }}</dd>
+    <dd><span class="badge priority-{{ task.priority }}">P{{ task.priority }}</span></dd>
     {% if let Some(assignee) = task.assignee.as_deref() %}
     <dt>Assignee</dt>
     <dd>{{ assignee }}</dd>
