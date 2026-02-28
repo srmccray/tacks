@@ -25,7 +25,12 @@
     <tr>
       <td>{{ ep.task.id }}</td>
       <td><a href="/tasks/{{ ep.task.id }}">{{ ep.task.title }}</a></td>
-      <td>{{ ep.task.status }}</td>
+      <td><span class="badge status-{{ ep.task.status }}">
+        {%- if ep.task.status == crate::models::Status::Open -%}Open
+        {%- else if ep.task.status == crate::models::Status::InProgress -%}In Progress
+        {%- else if ep.task.status == crate::models::Status::Done -%}Done
+        {%- else -%}Blocked{%- endif -%}
+      </span></td>
       <td>{{ ep.children_done }}/{{ ep.children_total }}</td>
     </tr>
     {% endfor %}

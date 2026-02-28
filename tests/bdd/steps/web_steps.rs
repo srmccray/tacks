@@ -109,6 +109,35 @@ async fn i_get_path(world: &mut TacksWorld, path: String) {
     http_get(world, &path).await;
 }
 
+/// Perform a GET request with HX-Request header (simulates HTMX request).
+#[when(expr = "I HTMX GET {string}")]
+async fn i_htmx_get_path(world: &mut TacksWorld, path: String) {
+    let port = world
+        .server_port
+        .expect("server not started — add 'Given the web server is running'");
+    let url = format!("http://127.0.0.1:{port}{path}");
+    let resp = world
+        .http_client
+        .get(&url)
+        .header("HX-Request", "true")
+        .send()
+        .await
+        .unwrap_or_else(|e| panic!("HTMX GET {url} failed: {e}"));
+    let status = resp.status().as_u16();
+    let content_type = resp
+        .headers()
+        .get(reqwest::header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_string());
+    let body = resp
+        .text()
+        .await
+        .unwrap_or_else(|e| panic!("failed to read response body: {e}"));
+    world.last_response_status = Some(status);
+    world.last_response_content_type = content_type;
+    world.last_response_body = Some(body);
+}
+
 // ---------------------------------------------------------------------------
 // Then steps
 // ---------------------------------------------------------------------------
@@ -162,4 +191,53 @@ async fn i_get_the_html_task(world: &mut TacksWorld, alias: String) {
         .unwrap_or_else(|| panic!("no task with alias '{alias}'"))
         .clone();
     http_get(world, &format!("/tasks/{id}")).await;
+}
+
+/// Perform an HTMX GET request to the detail page for a task identified by
+/// alias (sends HX-Request header to get fragment response).
+#[when(expr = "I HTMX GET the task {string}")]
+async fn i_htmx_get_the_task(world: &mut TacksWorld, alias: String) {
+    let id = world
+        .task_ids
+        .get(&alias)
+        .unwrap_or_else(|| panic!("no task with alias '{alias}'"))
+        .clone();
+    let port = world
+        .server_port
+        .expect("server not started — add 'Given the web server is running'");
+    let url = format!("http://127.0.0.1:{port}/tasks/{id}");
+    let resp = world
+        .http_client
+        .get(&url)
+        .header("HX-Request", "true")
+        .send()
+        .await
+        .unwrap_or_else(|e| panic!("HTMX GET {url} failed: {e}"));
+    let status = resp.status().as_u16();
+    let content_type = resp
+        .headers()
+        .get(reqwest::header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .map(|s| s.to_string());
+    let body = resp
+        .text()
+        .await
+        .unwrap_or_else(|e| panic!("failed to read response body: {e}"));
+    world.last_response_status = Some(status);
+    world.last_response_content_type = content_type;
+    world.last_response_body = Some(body);
+}
+
+/// Assert that the most recent HTTP response body does NOT contain the given
+/// substring.
+#[then(expr = "the response body does not contain {string}")]
+async fn the_response_body_does_not_contain(world: &mut TacksWorld, unexpected: String) {
+    let body = world
+        .last_response_body
+        .as_deref()
+        .expect("no HTTP response body recorded — did you make a request?");
+    assert!(
+        !body.contains(&unexpected),
+        "expected response body NOT to contain {unexpected:?}, but it was found in body:\n{body}"
+    );
 }

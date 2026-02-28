@@ -1,7 +1,7 @@
 use askama::Template;
 use axum::Json;
 use axum::extract::{Path, Query, State};
-use axum::http::StatusCode;
+use axum::http::{HeaderMap, StatusCode};
 use axum::response::{Html, IntoResponse, Response};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
@@ -671,6 +671,19 @@ struct TaskListTemplate {
 #[template(path = "task_detail.html")]
 struct TaskDetailTemplate {
     task: Task,
+    blockers: Vec<Task>,
+    dependents: Vec<Task>,
+    comments: Vec<Comment>,
+}
+
+/// Template for the task detail modal fragment loaded via HTMX.
+#[derive(Template)]
+#[template(path = "task_detail_fragment.html")]
+struct TaskDetailFragmentTemplate {
+    task: Task,
+    blockers: Vec<Task>,
+    dependents: Vec<Task>,
+    comments: Vec<Comment>,
 }
 
 /// Template for the kanban board page at GET /board.
@@ -763,18 +776,69 @@ pub async fn task_new() -> Response {
     render_template(TaskNewTemplate)
 }
 
+/// All data needed to render a task detail view (full page or modal fragment).
+struct TaskDetailData {
+    task: Task,
+    blockers: Vec<Task>,
+    dependents: Vec<Task>,
+    comments: Vec<Comment>,
+}
+
 /// GET /tasks/:id — Task detail page (200 or 404).
-pub async fn task_detail(State(state): State<AppState>, Path(id): Path<String>) -> Response {
+///
+/// When called from HTMX (`HX-Request: true`), renders a modal fragment.
+/// When called via direct browser navigation, renders the full page template.
+pub async fn task_detail(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Response {
+    let is_htmx = headers.contains_key("HX-Request");
     let db = state.db.clone();
-    let result = tokio::task::spawn_blocking(move || {
+    let result = tokio::task::spawn_blocking(move || -> Result<Option<TaskDetailData>, String> {
         let db = db.lock().unwrap();
-        db.get_task(&id)
+        let task = match db.get_task(&id)? {
+            Some(t) => t,
+            None => return Ok(None),
+        };
+        // Resolve blocker dependency records to full Task objects
+        let blocker_deps = db.get_blockers(&id)?;
+        let mut blockers = Vec::with_capacity(blocker_deps.len());
+        for dep in blocker_deps {
+            if let Some(t) = db.get_task(&dep.parent_id)? {
+                blockers.push(t);
+            }
+        }
+        let dependents = db.get_dependents(&id)?;
+        let comments = db.get_comments(&id)?;
+        Ok(Some(TaskDetailData {
+            task,
+            blockers,
+            dependents,
+            comments,
+        }))
     })
     .await
     .unwrap();
 
     match result {
-        Ok(Some(task)) => render_template(TaskDetailTemplate { task }),
+        Ok(Some(data)) => {
+            if is_htmx {
+                render_template(TaskDetailFragmentTemplate {
+                    task: data.task,
+                    blockers: data.blockers,
+                    dependents: data.dependents,
+                    comments: data.comments,
+                })
+            } else {
+                render_template(TaskDetailTemplate {
+                    task: data.task,
+                    blockers: data.blockers,
+                    dependents: data.dependents,
+                    comments: data.comments,
+                })
+            }
+        }
         Ok(None) => (StatusCode::NOT_FOUND, "task not found").into_response(),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,

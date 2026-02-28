@@ -22,6 +22,14 @@ Or download binaries directly from [GitHub Releases](https://github.com/srmccray
 cargo install tacks
 ```
 
+### From source
+
+```bash
+git clone https://github.com/srmccray/tacks.git
+cd tacks
+cargo install --path .
+```
+
 ## Quick start
 
 ```bash

@@ -16,7 +16,11 @@
     <h2>Open</h2>
     {% for task in open_tasks %}
     <article>
-      <a href="/tasks/{{ task.id }}">{{ task.title }}</a>
+      <a href="/tasks/{{ task.id }}"
+         hx-get="/tasks/{{ task.id }}"
+         hx-target="#task-modal"
+         hx-select="unset"
+         hx-swap="innerHTML">{{ task.title }}</a>
     </article>
     {% endfor %}
   </div>
@@ -24,7 +28,11 @@
     <h2>In Progress</h2>
     {% for task in in_progress_tasks %}
     <article>
-      <a href="/tasks/{{ task.id }}">{{ task.title }}</a>
+      <a href="/tasks/{{ task.id }}"
+         hx-get="/tasks/{{ task.id }}"
+         hx-target="#task-modal"
+         hx-select="unset"
+         hx-swap="innerHTML">{{ task.title }}</a>
     </article>
     {% endfor %}
   </div>
@@ -32,7 +40,11 @@
     <h2>Blocked</h2>
     {% for task in blocked_tasks %}
     <article>
-      <a href="/tasks/{{ task.id }}">{{ task.title }}</a>
+      <a href="/tasks/{{ task.id }}"
+         hx-get="/tasks/{{ task.id }}"
+         hx-target="#task-modal"
+         hx-select="unset"
+         hx-swap="innerHTML">{{ task.title }}</a>
     </article>
     {% endfor %}
   </div>
@@ -40,7 +52,11 @@
     <h2>Done</h2>
     {% for task in done_tasks %}
     <article>
-      <a href="/tasks/{{ task.id }}">{{ task.title }}</a>
+      <a href="/tasks/{{ task.id }}"
+         hx-get="/tasks/{{ task.id }}"
+         hx-target="#task-modal"
+         hx-select="unset"
+         hx-swap="innerHTML">{{ task.title }}</a>
     </article>
     {% endfor %}
   </div>

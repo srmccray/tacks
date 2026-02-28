@@ -7,7 +7,13 @@
 
 <h1>Tasks</h1>
 
-<form method="get" action="/tasks">
+<form method="get" action="/tasks"
+      hx-get="/tasks"
+      hx-trigger="change from:select, keyup changed delay:300ms from:input"
+      hx-target="#content-area"
+      hx-select="#content-area"
+      hx-swap="outerHTML"
+      hx-push-url="true">
   <div class="grid">
     <select name="status">
       <option value="">All statuses</option>
@@ -23,7 +29,7 @@
       <option value="3" {% if priority_filter.as_deref() == Some("3") %}selected{% endif %}>P3</option>
     </select>
     <input type="text" name="tag" placeholder="Filter by tag" value="{{ tag_filter.as_deref().unwrap_or_default() }}">
-    <button type="submit">Filter</button>
+    <noscript><button type="submit">Filter</button></noscript>
   </div>
 </form>
 
@@ -45,10 +51,19 @@
     {% for task in tasks %}
     <tr tabindex="-1" data-href="/tasks/{{ task.id }}">
       <td>{{ task.id }}</td>
-      <td><a href="/tasks/{{ task.id }}">{{ task.title }}</a></td>
-      <td>{{ task.status }}</td>
+      <td><a href="/tasks/{{ task.id }}"
+             hx-get="/tasks/{{ task.id }}"
+             hx-target="#task-modal"
+             hx-select="unset"
+             hx-swap="innerHTML">{{ task.title }}</a></td>
+      <td><span class="badge status-{{ task.status }}">
+        {%- if task.status == crate::models::Status::Open -%}Open
+        {%- else if task.status == crate::models::Status::InProgress -%}In Progress
+        {%- else if task.status == crate::models::Status::Done -%}Done
+        {%- else -%}Blocked{%- endif -%}
+      </span></td>
       <td>{{ task.priority }}</td>
-      <td>{{ task.tags|join(", ") }}</td>
+      <td>{% for tag in task.tags %}<span class="tag-pill">{{ tag }}</span> {% endfor %}</td>
       <td>{{ task.updated_at }}</td>
     </tr>
     {% endfor %}

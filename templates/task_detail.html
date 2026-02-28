@@ -7,9 +7,21 @@
 
 <dl>
   <dt>Status</dt>
-  <dd>{{ task.status }}</dd>
+  <dd>
+    <span class="badge status-{{ task.status }}">
+      {%- if task.status == crate::models::Status::Open -%}
+        Open
+      {%- else if task.status == crate::models::Status::InProgress -%}
+        In Progress
+      {%- else if task.status == crate::models::Status::Done -%}
+        Done
+      {%- else -%}
+        Blocked
+      {%- endif -%}
+    </span>
+  </dd>
   <dt>Priority</dt>
-  <dd>{{ task.priority }}</dd>
+  <dd class="priority-{{ task.priority }}">P{{ task.priority }}</dd>
   {% if let Some(assignee) = task.assignee.as_deref() %}
   <dt>Assignee</dt>
   <dd>{{ assignee }}</dd>
@@ -20,13 +32,51 @@
   {% endif %}
   {% if !task.tags.is_empty() %}
   <dt>Tags</dt>
-  <dd>{{ task.tags|join(", ") }}</dd>
+  <dd>
+    {% for tag in task.tags %}
+      <span class="tag-pill">{{ tag }}</span>
+    {% endfor %}
+  </dd>
   {% endif %}
   <dt>Created</dt>
   <dd>{{ task.created_at }}</dd>
   <dt>Updated</dt>
   <dd>{{ task.updated_at }}</dd>
 </dl>
+
+{% if !blockers.is_empty() %}
+<section>
+  <h2>Blocked by</h2>
+  <ul>
+    {% for blocker in blockers %}
+    <li><a href="/tasks/{{ blocker.id }}">{{ blocker.id }}: {{ blocker.title }}</a></li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if !dependents.is_empty() %}
+<section>
+  <h2>Blocking</h2>
+  <ul>
+    {% for dep in dependents %}
+    <li><a href="/tasks/{{ dep.id }}">{{ dep.id }}: {{ dep.title }}</a></li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% if !comments.is_empty() %}
+<section>
+  <h2>Comments</h2>
+  {% for comment in comments %}
+  <article>
+    <small>{{ comment.created_at }}</small>
+    <p>{{ comment.body }}</p>
+  </article>
+  {% endfor %}
+</section>
+{% endif %}
 
 <p><a href="/tasks">Back to task list</a></p>
 {% endblock %}

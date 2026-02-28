@@ -1,0 +1,86 @@
+<article>
+  <header>
+    <h3>{{ task.title }}</h3>
+    <button aria-label="Close" rel="prev" onclick="document.getElementById('task-modal').close()"></button>
+  </header>
+
+  <dl>
+    <dt>Status</dt>
+    <dd>
+      <span class="badge status-{{ task.status }}">
+        {%- if task.status == crate::models::Status::Open -%}
+          Open
+        {%- else if task.status == crate::models::Status::InProgress -%}
+          In Progress
+        {%- else if task.status == crate::models::Status::Done -%}
+          Done
+        {%- else -%}
+          Blocked
+        {%- endif -%}
+      </span>
+    </dd>
+    <dt>Priority</dt>
+    <dd class="priority-{{ task.priority }}">P{{ task.priority }}</dd>
+    {% if let Some(assignee) = task.assignee.as_deref() %}
+    <dt>Assignee</dt>
+    <dd>{{ assignee }}</dd>
+    {% endif %}
+    {% if !task.tags.is_empty() %}
+    <dt>Tags</dt>
+    <dd>
+      {% for tag in task.tags %}
+        <span class="tag-pill">{{ tag }}</span>
+      {% endfor %}
+    </dd>
+    {% endif %}
+    <dt>Created</dt>
+    <dd>{{ task.created_at }}</dd>
+    <dt>Updated</dt>
+    <dd>{{ task.updated_at }}</dd>
+  </dl>
+
+  {% if let Some(desc) = task.description.as_deref() %}
+  <section>
+    <h4>Description</h4>
+    <p>{{ desc }}</p>
+  </section>
+  {% endif %}
+
+  {% if !blockers.is_empty() %}
+  <section>
+    <h4>Blocked by</h4>
+    <ul>
+      {% for blocker in blockers %}
+      <li><a href="/tasks/{{ blocker.id }}">{{ blocker.id }}: {{ blocker.title }}</a></li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  {% if !dependents.is_empty() %}
+  <section>
+    <h4>Blocking</h4>
+    <ul>
+      {% for dep in dependents %}
+      <li><a href="/tasks/{{ dep.id }}">{{ dep.id }}: {{ dep.title }}</a></li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  {% if !comments.is_empty() %}
+  <section>
+    <h4>Comments</h4>
+    {% for comment in comments %}
+    <article>
+      <small>{{ comment.created_at }}</small>
+      <p>{{ comment.body }}</p>
+    </article>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  <footer>
+    <a href="/tasks/{{ task.id }}" role="button" class="secondary outline">View full page</a>
+  </footer>
+</article>

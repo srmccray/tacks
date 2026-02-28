@@ -150,6 +150,38 @@ Feature: Web view pages
     And the response body contains "description"
 
   # ---------------------------------------------------------------------------
+  # Task detail modal fragment — HTMX GET /tasks/:id
+  # ---------------------------------------------------------------------------
+
+  Scenario: HTMX request for task detail returns fragment without full page wrapper
+    Given I created a task via API with title "Modal task" as "modal-task"
+    When I HTMX GET the task "modal-task"
+    Then the response status is 200
+    And the response body contains "Modal task"
+    And the response body contains "<article"
+    And the response body does not contain "<!DOCTYPE"
+    And the response body does not contain "<html"
+
+  Scenario: HTMX fragment includes status badge
+    Given I created a task via API with title "Badge task" as "badge-task"
+    When I HTMX GET the task "badge-task"
+    Then the response status is 200
+    And the response body contains "badge status-"
+
+  Scenario: HTMX fragment includes close button
+    Given I created a task via API with title "Closable task" as "close-task"
+    When I HTMX GET the task "close-task"
+    Then the response status is 200
+    And the response body contains "aria-label="
+
+  Scenario: Direct request for task detail returns full page
+    Given I created a task via API with title "Full page task" as "full-task"
+    When I GET the HTML task "full-task"
+    Then the response status is 200
+    And the response body contains "<!DOCTYPE html"
+    And the response body contains "Full page task"
+
+  # ---------------------------------------------------------------------------
   # Navigation — all pages include nav links
   # ---------------------------------------------------------------------------
 

@@ -4,6 +4,40 @@
 (function () {
   'use strict';
 
+  // --- Theme toggle ---
+
+  function getEffectiveTheme() {
+    var explicit = document.documentElement.getAttribute('data-theme');
+    if (explicit) return explicit;
+    // Fall back to system preference
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+      ? 'dark'
+      : 'light';
+  }
+
+  function updateToggleButton(btn, currentTheme) {
+    // Use innerHTML so HTML entities (sun/moon characters) render correctly
+    btn.innerHTML = currentTheme === 'dark' ? '&#9728; Light' : '&#9790; Dark';
+  }
+
+  function initThemeToggle() {
+    var btn = document.getElementById('theme-toggle');
+    if (!btn) return;
+
+    updateToggleButton(btn, getEffectiveTheme());
+
+    btn.addEventListener('click', function () {
+      var current = getEffectiveTheme();
+      var next = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+      updateToggleButton(btn, next);
+    });
+  }
+
+  // Run after DOM is ready (script is deferred)
+  document.addEventListener('DOMContentLoaded', initThemeToggle);
+
   // --- Help overlay ---
 
   function createOverlay() {
@@ -86,7 +120,13 @@
     var idx = getFocusedRowIndex(rows);
     if (idx === -1) return;
     var href = rows[idx].getAttribute('data-href');
-    if (href) window.location.href = href;
+    if (!href) return;
+    var dlg = document.getElementById('task-modal');
+    if (dlg) {
+      htmx.ajax('GET', href, { target: '#task-modal', swap: 'innerHTML' });
+    } else {
+      window.location.href = href;
+    }
   }
 
   // --- Board navigation ---
@@ -107,17 +147,52 @@
 
   // --- Filter form: strip empty params before submit ---
 
+  // HTMX requests: remove empty-valued params before the request fires
+  document.addEventListener('htmx:configRequest', function (e) {
+    var params = e.detail.parameters;
+    Object.keys(params).forEach(function (key) {
+      if (params[key] === '') delete params[key];
+    });
+  });
+
+  // Plain form submits (no-JS fallback): disable empty inputs
   document.addEventListener('submit', function (e) {
     var form = e.target;
     if (form.tagName !== 'FORM' || form.method !== 'get') return;
-    // Disable empty-valued inputs so they're excluded from the query string
     Array.from(form.elements).forEach(function (el) {
       if (el.name && el.value === '') el.disabled = true;
     });
-    // Re-enable after navigation starts (for back-button compat)
     setTimeout(function () {
       Array.from(form.elements).forEach(function (el) { el.disabled = false; });
     }, 0);
+  });
+
+  // --- Task modal ---
+
+  // Open the modal after HTMX swaps content into it
+  document.addEventListener('htmx:afterSwap', function (e) {
+    if (e.detail.target.id === 'task-modal') {
+      var dlg = document.getElementById('task-modal');
+      if (dlg && !dlg.open) {
+        dlg.showModal();
+      }
+    }
+  });
+
+  // Delegate close-button clicks inside the task modal
+  document.addEventListener('click', function (e) {
+    if (e.target.closest('#task-modal [aria-label="Close"]')) {
+      var dlg = document.getElementById('task-modal');
+      if (dlg) dlg.close();
+    }
+  });
+
+  // Close task modal when user clicks the backdrop
+  document.addEventListener('click', function (e) {
+    var dlg = document.getElementById('task-modal');
+    if (dlg && dlg.open && e.target === dlg) {
+      dlg.close();
+    }
   });
 
   // --- Global keydown handler ---
@@ -127,6 +202,11 @@
 
     // Always allow Escape to close overlay or blur
     if (key === 'Escape') {
+      var taskModal = document.getElementById('task-modal');
+      if (taskModal && taskModal.open) {
+        taskModal.close();
+        return;
+      }
       var dlg = document.getElementById('help-overlay');
       if (dlg && dlg.open) {
         dlg.close();
