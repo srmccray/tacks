@@ -1,5 +1,32 @@
 /* Tacks custom component styles */
 
+/* Override Pico CSS primary/accent color: blue → purple */
+:root {
+  --pico-primary: #7c3aed;
+  --pico-primary-background: #7c3aed;
+  --pico-primary-border: var(--pico-primary-background);
+  --pico-primary-underline: rgba(124, 58, 237, 0.5);
+  --pico-primary-hover: #5b21b6;
+  --pico-primary-hover-background: #6d28d9;
+  --pico-primary-hover-border: var(--pico-primary-hover-background);
+  --pico-primary-hover-underline: var(--pico-primary-hover);
+  --pico-primary-focus: rgba(124, 58, 237, 0.375);
+  --pico-primary-inverse: #fff;
+}
+
+[data-theme="dark"] {
+  --pico-primary: #a78bfa;
+  --pico-primary-background: #7c3aed;
+  --pico-primary-border: var(--pico-primary-background);
+  --pico-primary-underline: rgba(167, 139, 250, 0.5);
+  --pico-primary-hover: #c4b5fd;
+  --pico-primary-hover-background: #8b5cf6;
+  --pico-primary-hover-border: var(--pico-primary-hover-background);
+  --pico-primary-hover-underline: var(--pico-primary-hover);
+  --pico-primary-focus: rgba(167, 139, 250, 0.375);
+  --pico-primary-inverse: #fff;
+}
+
 /* Base pill/badge */
 .badge {
   display: inline-block;
