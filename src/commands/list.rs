@@ -13,6 +13,6 @@ pub fn run(
     json: bool,
 ) -> Result<(), String> {
     let db = Database::open(db_path)?;
-    let tasks = db.list_tasks(all, status, priority, tag, parent)?;
+    let tasks = db.list_tasks(all, status, priority, tag, parent, None)?;
     print_tasks(&tasks, json)
 }

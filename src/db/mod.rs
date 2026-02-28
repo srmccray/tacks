@@ -159,6 +159,7 @@ impl Database {
         priority_filter: Option<u8>,
         tag_filter: Option<&str>,
         parent_filter: Option<&str>,
+        search: Option<&str>,
     ) -> Result<Vec<Task>, String> {
         let mut sql = String::from(
             "SELECT id, title, description, status, priority, assignee, parent_id, tags, created_at, updated_at, close_reason, notes FROM tasks WHERE 1=1",
@@ -193,7 +194,15 @@ impl Database {
         if let Some(parent) = parent_filter {
             sql.push_str(&format!(" AND parent_id = ?{param_idx}"));
             param_values.push(Box::new(parent.to_string()));
-            let _ = param_idx; // suppress unused warning
+            param_idx += 1;
+        }
+
+        if let Some(s) = search {
+            sql.push_str(&format!(
+                " AND title LIKE '%' || ?{param_idx} || '%' COLLATE NOCASE"
+            ));
+            param_values.push(Box::new(s.to_string()));
+            let _ = param_idx; // suppress unused warning after last param
         }
 
         sql.push_str(" ORDER BY priority ASC, created_at ASC");
