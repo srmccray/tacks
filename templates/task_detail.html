@@ -3,12 +3,12 @@
 {% block title %}{{ task.id }} — Tacks{% endblock %}
 
 {% block content %}
-<h1>{{ task.title }}</h1>
+<h1 data-editable data-field="title" data-task-id="{{ task.id }}">{{ task.title }}</h1>
 
 <div class="task-meta-row">
   <span class="meta-item"><span class="meta-label">ID</span> {{ task.id }}</span>
   <span class="meta-sep">·</span>
-  <span class="meta-item">
+  <span class="meta-item" data-editable data-field="status" data-task-id="{{ task.id }}">
     <span class="badge status-{{ task.status }}">
       {%- if task.status == crate::models::Status::Open -%}Open
       {%- else if task.status == crate::models::Status::InProgress -%}In Progress
@@ -17,30 +17,25 @@
     </span>
   </span>
   <span class="meta-sep">·</span>
-  <span class="meta-item"><span class="badge priority-{{ task.priority }}">P{{ task.priority }}</span></span>
+  <span class="meta-item" data-editable data-field="priority" data-task-id="{{ task.id }}"><span class="badge priority-{{ task.priority }}">P{{ task.priority }}</span></span>
   {% if let Some(p) = parent.as_ref() %}
   <span class="meta-sep">·</span>
   <span class="meta-item"><span class="meta-label">Epic</span> <a href="/epics/{{ p.id }}" class="epic-badge">{{ p.id }}: {{ p.title }}</a></span>
   {% endif %}
-  {% if let Some(assignee) = task.assignee.as_deref() %}
   <span class="meta-sep">·</span>
-  <span class="meta-item"><span class="meta-label">Assignee</span> {{ assignee }}</span>
-  {% endif %}
-  {% if !task.tags.is_empty() %}
+  <span class="meta-item" data-editable data-field="assignee" data-task-id="{{ task.id }}"><span class="meta-label">Assignee</span> {{ task.assignee.as_deref().unwrap_or("—") }}</span>
   <span class="meta-sep">·</span>
-  <span class="meta-item">
+  <span class="meta-item" data-editable data-field="tags" data-task-id="{{ task.id }}">
     {% for tag in &task.tags %}<span class="tag-pill">{{ tag }}</span>{% endfor %}
+    {% if task.tags.is_empty() %}<span class="meta-label">Tags</span> —{% endif %}
   </span>
-  {% endif %}
   <span class="meta-sep">·</span>
   <span class="meta-item"><span class="meta-label">Created</span> {{ task.created_at.format("%b %d, %Y %H:%M") }}</span>
   <span class="meta-sep">·</span>
   <span class="meta-item"><span class="meta-label">Updated</span> {{ task.updated_at.format("%b %d, %Y %H:%M") }}</span>
 </div>
 
-{% if let Some(desc) = task.description.as_deref() %}
-<p class="task-description">{{ desc }}</p>
-{% endif %}
+<p class="task-description" data-editable data-field="description" data-task-id="{{ task.id }}">{{ task.description.as_deref().unwrap_or("—") }}</p>
 
 {% if !blockers.is_empty() %}
 <section>
