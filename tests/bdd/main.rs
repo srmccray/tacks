@@ -32,6 +32,10 @@ pub struct TacksWorld {
     pub last_response_content_type: Option<String>,
     /// Body text of the most recent response.
     pub last_response_body: Option<String>,
+    /// The ID of the most recently created task via inline-edit steps.
+    pub last_task_id: Option<String>,
+    /// Stored created_at timestamp for datetime-immutability assertions.
+    pub stored_created_at: Option<String>,
 }
 
 impl Default for TacksWorld {
@@ -49,6 +53,8 @@ impl Default for TacksWorld {
             last_response_status: None,
             last_response_content_type: None,
             last_response_body: None,
+            last_task_id: None,
+            stored_created_at: None,
         }
     }
 }

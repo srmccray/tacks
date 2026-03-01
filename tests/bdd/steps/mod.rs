@@ -7,6 +7,7 @@ pub mod dep_steps;
 pub mod epic_status_steps;
 pub mod epic_steps;
 pub mod filter_steps;
+pub mod inline_edit_steps;
 pub mod notes_steps;
 pub mod parent_filter_steps;
 pub mod task_steps;
