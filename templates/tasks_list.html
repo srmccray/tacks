@@ -56,6 +56,7 @@
       <th>Status</th>
       <th>Priority</th>
       <th>Tags</th>
+      <th>Assignee</th>
       <th>Updated</th>
     </tr>
   </thead>
@@ -71,19 +72,20 @@
              hx-select="unset"
              hx-swap="innerHTML">{{ row.task.id }}</a></td>
       <td>
-        {{ row.task.title }}
+        <span data-editable data-field="title" data-task-id="{{ row.task.id }}">{{ row.task.title }}</span>
         {% if let (Some(pid), Some(ptitle)) = (row.parent_id.as_deref(), row.parent_title.as_deref()) %}
         <a href="/epics/{{ pid }}" class="epic-badge">{{ pid }}: {{ ptitle }}</a>
         {% endif %}
       </td>
-      <td><span class="badge status-{{ row.task.status }}">
+      <td data-editable data-field="status" data-task-id="{{ row.task.id }}"><span class="badge status-{{ row.task.status }}">
         {%- if row.task.status == crate::models::Status::Open -%}Open
         {%- else if row.task.status == crate::models::Status::InProgress -%}In Progress
         {%- else if row.task.status == crate::models::Status::Done -%}Done
         {%- else -%}Blocked{%- endif -%}
       </span></td>
-      <td><span class="badge priority-{{ row.task.priority }}">P{{ row.task.priority }}</span></td>
-      <td>{% for tag in &row.task.tags %}<span class="tag-pill">{{ tag }}</span> {% endfor %}</td>
+      <td data-editable data-field="priority" data-task-id="{{ row.task.id }}"><span class="badge priority-{{ row.task.priority }}">P{{ row.task.priority }}</span></td>
+      <td data-editable data-field="tags" data-task-id="{{ row.task.id }}">{% for tag in &row.task.tags %}<span class="tag-pill">{{ tag }}</span> {% endfor %}</td>
+      <td data-editable data-field="assignee" data-task-id="{{ row.task.id }}">{{ row.task.assignee.as_deref().unwrap_or_default() }}</td>
       <td class="col-updated">{{ row.task.updated_at.format("%b %d %H:%M") }}</td>
     </tr>
     {% endfor %}

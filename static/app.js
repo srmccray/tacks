@@ -250,6 +250,17 @@
     }
   });
 
+  // Pause HTMX polling swaps while inline editing is active
+  document.addEventListener('htmx:beforeSwap', function (e) {
+    // Only guard tbody polling swaps, not full content-area navigations
+    if (e.detail.target && e.detail.target.tagName === 'TBODY') {
+      var editing = document.querySelector('[data-editable].editing');
+      if (editing) {
+        e.detail.shouldSwap = false;
+      }
+    }
+  });
+
   // Delegate close-button clicks inside the task modal
   document.addEventListener('click', function (e) {
     if (e.target.closest('#task-modal [aria-label="Close"]')) {
