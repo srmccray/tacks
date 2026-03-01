@@ -540,3 +540,103 @@ a.view-toggle-btn:hover {
   background-color: color-mix(in srgb, #6b7280 25%, transparent);
   color: #9ca3af;
 }
+
+/* --- Inline editing --- */
+
+/* Element in edit mode */
+[data-editable].editing {
+  outline: 2px solid var(--pico-primary, #7c3aed);
+  outline-offset: 2px;
+  border-radius: var(--pico-border-radius, 0.25rem);
+  background-color: color-mix(in srgb, var(--pico-primary, #7c3aed) 5%, transparent);
+  padding: 0.1em 0.25em;
+  margin: -0.1em -0.25em;
+  transition: outline 0.1s, background-color 0.1s;
+}
+
+/* Hint cursor on editable elements */
+[data-editable]:not(.editing) {
+  cursor: pointer;
+}
+
+[data-editable]:not(.editing):hover {
+  text-decoration: underline dotted var(--pico-muted-color, #6b7280);
+}
+
+/* Inputs created by inline edit inherit surrounding typography */
+.inline-edit-input {
+  font-size: inherit;
+  font-family: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  color: inherit;
+  border: none;
+  border-bottom: 2px solid var(--pico-primary, #7c3aed);
+  background: transparent;
+  outline: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.inline-edit-input:focus {
+  outline: none;
+}
+
+/* Select inputs in edit mode */
+.inline-edit-select {
+  font-size: inherit;
+  font-family: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  border: none;
+  border-bottom: 2px solid var(--pico-primary, #7c3aed);
+  background: var(--pico-form-element-background-color, #fff);
+  color: inherit;
+  outline: none;
+  padding: 0.1em 0.25em;
+  margin: 0;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+[data-theme="dark"] .inline-edit-select {
+  background: var(--pico-form-element-background-color, #1e1e2e);
+}
+
+/* Textarea for description editing */
+.inline-edit-textarea {
+  font-size: inherit;
+  font-family: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  color: inherit;
+  border: 1px solid var(--pico-primary, #7c3aed);
+  border-radius: var(--pico-border-radius, 0.25rem);
+  background: var(--pico-form-element-background-color, #fff);
+  outline: none;
+  padding: 0.4em 0.5em;
+  margin: 0;
+  width: 100%;
+  min-height: 5em;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+[data-theme="dark"] .inline-edit-textarea {
+  background: var(--pico-form-element-background-color, #1e1e2e);
+}
+
+/* Error flash — briefly shown on save failure */
+[data-editable].edit-error {
+  outline-color: #ef4444;
+  background-color: color-mix(in srgb, #ef4444 8%, transparent);
+  animation: edit-error-shake 0.3s ease;
+}
+
+@keyframes edit-error-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}

@@ -451,6 +451,247 @@
     }
   });
 
+  // --- Inline editing ---
+
+  // Track elements currently being edited to avoid double-saves.
+  // WeakMap<HTMLElement, { saved: boolean, original: string }>
+  var editingState = new WeakMap();
+
+  // Build a status badge HTML string for re-rendering after save
+  function statusBadgeHtml(status) {
+    var label = status.replace('_', ' ');
+    return '<span class="badge status-' + status + '">' + label + '</span>';
+  }
+
+  // Build a priority badge HTML string for re-rendering after save
+  function priorityBadgeHtml(priority) {
+    return '<span class="badge priority-' + priority + '">P' + priority + '</span>';
+  }
+
+  // Build tag pill HTML for a single tag
+  function tagPillHtml(tag) {
+    return '<span class="tag-pill">' + tag + '</span>';
+  }
+
+  // Determine what HTML to show in the element after a successful save
+  function renderSavedValue(field, value) {
+    if (field === 'status') {
+      return statusBadgeHtml(value);
+    }
+    if (field === 'priority') {
+      return priorityBadgeHtml(value);
+    }
+    if (field === 'tags') {
+      var tagList = Array.isArray(value) ? value : [value];
+      return tagList.map(tagPillHtml).join(' ');
+    }
+    // For plain text fields: escape HTML entities
+    var div = document.createElement('div');
+    div.textContent = value;
+    return div.innerHTML;
+  }
+
+  // Finish editing: restore original content and remove editing class
+  function cancelEdit(el) {
+    var state = editingState.get(el);
+    if (!state) return;
+    editingState.delete(el);
+    el.classList.remove('editing');
+    el.innerHTML = state.original;
+  }
+
+  // Show a brief error flash on the element
+  function flashError(el) {
+    el.classList.add('edit-error');
+    setTimeout(function () {
+      el.classList.remove('edit-error');
+    }, 2000);
+  }
+
+  // Commit an edit: PATCH the server and update the DOM on success
+  function commitEdit(el, field, rawValue) {
+    var state = editingState.get(el);
+    if (!state || state.saved) return;
+    state.saved = true;
+
+    var taskId = el.getAttribute('data-task-id');
+    if (!taskId) {
+      cancelEdit(el);
+      return;
+    }
+
+    // Build the PATCH payload
+    var payload = {};
+    if (field === 'priority') {
+      payload[field] = parseInt(rawValue, 10);
+    } else if (field === 'tags') {
+      // Split comma-separated string into trimmed array, drop empty strings
+      payload[field] = rawValue
+        .split(',')
+        .map(function (t) { return t.trim(); })
+        .filter(function (t) { return t.length > 0; });
+    } else {
+      payload[field] = rawValue;
+    }
+
+    fetch('/api/tasks/' + taskId, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function () {
+        // Successful save — render the new value
+        editingState.delete(el);
+        el.classList.remove('editing');
+        el.innerHTML = renderSavedValue(field, payload[field]);
+      })
+      .catch(function () {
+        // Failed — revert to original and flash error
+        editingState.delete(el);
+        el.classList.remove('editing');
+        el.innerHTML = state.original;
+        flashError(el);
+      });
+  }
+
+  // Create the appropriate input element for the given field
+  function createInput(field, currentText) {
+    var input;
+
+    if (field === 'status') {
+      input = document.createElement('select');
+      input.className = 'inline-edit-select';
+      ['open', 'in_progress', 'done', 'blocked'].forEach(function (opt) {
+        var o = document.createElement('option');
+        o.value = opt;
+        o.textContent = opt.replace('_', ' ');
+        // Match against the raw status value embedded in the badge class or text
+        if (currentText.replace(/\s+/g, '_').toLowerCase() === opt ||
+            currentText.toLowerCase().replace(/\s+/g, '_') === opt) {
+          o.selected = true;
+        }
+        input.appendChild(o);
+      });
+    } else if (field === 'priority') {
+      input = document.createElement('select');
+      input.className = 'inline-edit-select';
+      [1, 2, 3].forEach(function (p) {
+        var o = document.createElement('option');
+        o.value = String(p);
+        o.textContent = 'P' + p;
+        // currentText might be "P1", "P2", or "1", "2"
+        var numText = currentText.replace(/[^0-9]/g, '');
+        if (numText === String(p)) o.selected = true;
+        input.appendChild(o);
+      });
+    } else if (field === 'description') {
+      input = document.createElement('textarea');
+      input.className = 'inline-edit-textarea';
+      input.value = currentText;
+      // Auto-size based on content
+      input.rows = Math.max(3, (currentText.match(/\n/g) || []).length + 2);
+    } else {
+      // title, assignee, tags — plain text input
+      input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'inline-edit-input';
+      input.value = currentText;
+    }
+
+    return input;
+  }
+
+  // Extract the "current value" from an editable element's inner text/content.
+  // For badge/pill elements we parse the text content; for plain text we use textContent.
+  function extractCurrentText(el, field) {
+    if (field === 'tags') {
+      // Tags are rendered as multiple .tag-pill spans — collect their text
+      var pills = el.querySelectorAll('.tag-pill');
+      if (pills.length > 0) {
+        return Array.from(pills).map(function (p) { return p.textContent.trim(); }).join(', ');
+      }
+    }
+    // For all other fields: use trimmed textContent (works for badges too)
+    return el.textContent.trim();
+  }
+
+  // Begin editing an element
+  function beginEdit(el) {
+    // Already editing?
+    if (editingState.has(el)) return;
+
+    var field = el.getAttribute('data-field');
+    if (!field) return;
+
+    var originalHtml = el.innerHTML;
+    var currentText = extractCurrentText(el, field);
+
+    editingState.set(el, { saved: false, original: originalHtml });
+    el.classList.add('editing');
+
+    var input = createInput(field, currentText);
+
+    // Clear element and insert input
+    el.innerHTML = '';
+    el.appendChild(input);
+
+    // Focus and select text
+    input.focus();
+    if (input.select) {
+      input.select();
+    }
+
+    // For select elements, save immediately on change
+    if (field === 'status' || field === 'priority') {
+      input.addEventListener('change', function () {
+        commitEdit(el, field, input.value);
+      });
+      // Escape: cancel
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+          e.stopPropagation();
+          cancelEdit(el);
+        }
+      });
+      return;
+    }
+
+    // For text inputs and textareas: save on Enter (text only), Escape cancels
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        cancelEdit(el);
+        return;
+      }
+      // Enter saves for single-line inputs; Shift+Enter in textarea is a newline
+      if (e.key === 'Enter' && field !== 'description') {
+        e.preventDefault();
+        commitEdit(el, field, input.value);
+      }
+    });
+
+    // Save on blur (handles click-away)
+    input.addEventListener('blur', function () {
+      var state = editingState.get(el);
+      if (state && !state.saved) {
+        commitEdit(el, field, input.value);
+      }
+    });
+  }
+
+  // Event delegation: clicks on [data-editable] elements begin editing
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest('[data-editable]');
+    if (!el) return;
+    // Don't start a new edit if we clicked inside an already-active input
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+    beginEdit(el);
+  });
+
   // --- Global keydown handler ---
 
   document.addEventListener('keydown', function (e) {
