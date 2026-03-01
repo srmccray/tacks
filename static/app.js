@@ -661,9 +661,10 @@
       input.addEventListener('change', function () {
         commitEdit(el, field, input.value);
       });
-      // Escape: cancel
+      // Escape: cancel edit (preventDefault stops native <dialog> close)
       input.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') {
+          e.preventDefault();
           e.stopPropagation();
           cancelEdit(el);
         }
@@ -674,6 +675,7 @@
     // For text inputs and textareas: save on Enter (text only), Escape cancels
     input.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') {
+        e.preventDefault();
         e.stopPropagation();
         cancelEdit(el);
         return;
