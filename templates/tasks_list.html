@@ -5,8 +5,6 @@
 {% block content %}
 <div id="content-area">
 
-<h1>Tasks</h1>
-
 <form method="get" action="/tasks"
       hx-get="/tasks"
       hx-trigger="change from:select, change from:#tag-hidden-input, keyup changed delay:300ms from:input[name='search']"
@@ -65,23 +63,28 @@
          hx-trigger="every 2s [document.visibilityState === 'visible']"
          hx-select="tbody"
          hx-swap="outerHTML">
-    {% for task in tasks %}
-    <tr tabindex="-1" data-href="/tasks/{{ task.id }}">
-      <td><a href="/tasks/{{ task.id }}"
-             hx-get="/tasks/{{ task.id }}"
+    {% for row in tasks %}
+    <tr tabindex="-1" data-href="/tasks/{{ row.task.id }}">
+      <td><a href="/tasks/{{ row.task.id }}"
+             hx-get="/tasks/{{ row.task.id }}"
              hx-target="#task-modal"
              hx-select="unset"
-             hx-swap="innerHTML">{{ task.id }}</a></td>
-      <td>{{ task.title }}</td>
-      <td><span class="badge status-{{ task.status }}">
-        {%- if task.status == crate::models::Status::Open -%}Open
-        {%- else if task.status == crate::models::Status::InProgress -%}In Progress
-        {%- else if task.status == crate::models::Status::Done -%}Done
+             hx-swap="innerHTML">{{ row.task.id }}</a></td>
+      <td>
+        {{ row.task.title }}
+        {% if let (Some(pid), Some(ptitle)) = (row.parent_id.as_deref(), row.parent_title.as_deref()) %}
+        <a href="/epics/{{ pid }}" class="epic-badge">{{ pid }}: {{ ptitle }}</a>
+        {% endif %}
+      </td>
+      <td><span class="badge status-{{ row.task.status }}">
+        {%- if row.task.status == crate::models::Status::Open -%}Open
+        {%- else if row.task.status == crate::models::Status::InProgress -%}In Progress
+        {%- else if row.task.status == crate::models::Status::Done -%}Done
         {%- else -%}Blocked{%- endif -%}
       </span></td>
-      <td><span class="badge priority-{{ task.priority }}">P{{ task.priority }}</span></td>
-      <td>{% for tag in task.tags %}<span class="tag-pill">{{ tag }}</span> {% endfor %}</td>
-      <td>{{ task.updated_at.format("%b %d, %Y %H:%M") }}</td>
+      <td><span class="badge priority-{{ row.task.priority }}">P{{ row.task.priority }}</span></td>
+      <td>{% for tag in &row.task.tags %}<span class="tag-pill">{{ tag }}</span> {% endfor %}</td>
+      <td class="col-updated">{{ row.task.updated_at.format("%b %d %H:%M") }}</td>
     </tr>
     {% endfor %}
   </tbody>

@@ -17,7 +17,7 @@
 
   function updateToggleButton(btn, currentTheme) {
     // Use innerHTML so HTML entities (sun/moon characters) render correctly
-    btn.innerHTML = currentTheme === 'dark' ? '&#9728; Light' : '&#9790; Dark';
+    btn.innerHTML = currentTheme === 'dark' ? '&#9728; Light mode' : '&#9790; Dark mode';
   }
 
   function initThemeToggle() {
@@ -32,11 +32,82 @@
       document.documentElement.setAttribute('data-theme', next);
       localStorage.setItem('theme', next);
       updateToggleButton(btn, next);
+      // Close the settings menu after toggling
+      var menu = document.getElementById('settings-menu');
+      var gear = document.getElementById('settings-gear');
+      if (menu) menu.setAttribute('hidden', '');
+      if (gear) gear.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  // --- Settings gear dropdown ---
+
+  function initSettingsDropdown() {
+    var gear = document.getElementById('settings-gear');
+    var menu = document.getElementById('settings-menu');
+    if (!gear || !menu) return;
+
+    gear.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var isOpen = !menu.hasAttribute('hidden');
+      if (isOpen) {
+        menu.setAttribute('hidden', '');
+        gear.setAttribute('aria-expanded', 'false');
+      } else {
+        menu.removeAttribute('hidden');
+        gear.setAttribute('aria-expanded', 'true');
+      }
+    });
+
+    // Close when clicking outside
+    document.addEventListener('click', function (e) {
+      if (!e.target.closest('#settings-dropdown')) {
+        menu.setAttribute('hidden', '');
+        gear.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
+
+  // --- Nav active tab highlight ---
+
+  function initNavActive() {
+    var path = window.location.pathname;
+    // Normalise trailing slash: /tasks/ -> /tasks
+    if (path.length > 1 && path.endsWith('/')) {
+      path = path.slice(0, -1);
+    }
+    var navMap = {
+      'nav-issues': '/tasks',
+      'nav-board': '/board',
+      'nav-epics': '/epics',
+    };
+    Object.keys(navMap).forEach(function (id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      var base = navMap[id];
+      var isActive = path === base || path.startsWith(base + '/') || path.startsWith(base + '?');
+      if (isActive) {
+        el.classList.add('nav-active');
+      } else {
+        el.classList.remove('nav-active');
+      }
     });
   }
 
   // Run after DOM is ready (script is deferred)
-  document.addEventListener('DOMContentLoaded', initThemeToggle);
+  document.addEventListener('DOMContentLoaded', function () {
+    initThemeToggle();
+    initSettingsDropdown();
+    initNavActive();
+  });
+
+  // Re-run nav active highlight after HTMX navigates (hx-push-url updates location).
+  // htmx:afterSettle is the most reliable: fires after content is swapped AND
+  // window.location.pathname is already updated by hx-push-url.
+  document.addEventListener('htmx:afterSettle', initNavActive);
+  // Keep pushUrl/replaceUrl as belt-and-suspenders for immediate URL feedback
+  document.addEventListener('htmx:pushUrl', initNavActive);
+  document.addEventListener('htmx:replaceUrl', initNavActive);
 
   // --- Help overlay ---
 

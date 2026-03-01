@@ -106,14 +106,16 @@
   display: flex;
   align-items: center;
   gap: 0.4em;
-  /* Match Pico input height so grid row stays even */
-  min-height: calc(var(--pico-form-element-spacing-vertical, 0.75rem) * 2 + 1.25em + 2px);
+  /* Match Pico select/input height: same vertical padding + line-height + border */
+  height: calc(var(--pico-form-element-spacing-vertical, 0.75rem) * 2 + var(--pico-line-height, 1.5) * 1rem + 2px);
+  box-sizing: border-box;
   border: 1px solid var(--pico-form-element-border-color, #767676);
   border-radius: var(--pico-border-radius, 0.25rem);
-  padding: 0.3em 0.6em;
+  padding: var(--pico-form-element-spacing-vertical, 0.75rem) 0.6em;
   background-color: var(--pico-form-element-background-color, #fff);
   cursor: text;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow: hidden;
 }
 
 .tag-autocomplete:focus-within {
@@ -224,6 +226,305 @@
 .badge.priority-3 {
   background-color: color-mix(in srgb, #6b7280 15%, transparent);
   color: #4b5563;
+}
+
+/* Timestamp column: never wrap */
+.col-updated {
+  white-space: nowrap;
+}
+
+/* Board card: clean compact layout */
+.board-card {
+  padding-bottom: 0.5rem;
+}
+
+/* Board card header: title link + priority pill on one line */
+.board-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+
+.board-card-header a {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+/* Nav tab bar */
+nav.nav-tabs {
+  border-bottom: 1px solid var(--pico-muted-border-color, #d1d5db);
+  margin-bottom: 0;
+}
+
+/* Increase spacing between nav items */
+nav.nav-tabs ul:last-child {
+  gap: 0.5rem;
+}
+
+nav.nav-tabs ul:last-child li a {
+  /* Remove Pico's default link decoration from nav items */
+  text-decoration: none;
+  color: var(--pico-muted-color, #6b7280);
+  padding: 0.5rem 0.1rem;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px; /* overlap the nav border-bottom */
+  display: inline-block;
+  font-weight: 400;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+nav.nav-tabs ul:last-child li a:hover {
+  color: var(--pico-color, inherit);
+  border-bottom-color: var(--pico-muted-border-color, #d1d5db);
+}
+
+nav.nav-tabs ul:last-child li a.nav-active {
+  color: var(--pico-primary, #7c3aed);
+  border-bottom-color: var(--pico-primary, #7c3aed);
+  font-weight: 600;
+}
+
+[data-theme="dark"] nav.nav-tabs {
+  border-bottom-color: var(--pico-muted-border-color, #374151);
+}
+
+[data-theme="dark"] nav.nav-tabs ul:last-child li a {
+  color: var(--pico-muted-color, #9ca3af);
+}
+
+[data-theme="dark"] nav.nav-tabs ul:last-child li a:hover {
+  color: var(--pico-color, #e5e7eb);
+  border-bottom-color: var(--pico-muted-border-color, #374151);
+}
+
+[data-theme="dark"] nav.nav-tabs ul:last-child li a.nav-active {
+  color: var(--pico-primary, #a78bfa);
+  border-bottom-color: var(--pico-primary, #a78bfa);
+}
+
+/* Settings gear dropdown */
+.settings-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.settings-gear-btn {
+  padding: 0.25rem 0.5rem !important;
+  font-size: 1rem !important;
+  line-height: 1 !important;
+  border: none !important;
+  background: none !important;
+  color: var(--pico-muted-color, #6b7280) !important;
+  box-shadow: none !important;
+  cursor: pointer;
+}
+
+.settings-gear-btn:hover {
+  color: var(--pico-color, inherit) !important;
+}
+
+.settings-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 10rem;
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0;
+  /* Explicit colors — do not rely on Pico defaults which may not cascade here */
+  background-color: #ffffff;
+  color: #1a1a2e;
+  border: 1px solid #d1d5db;
+  border-radius: var(--pico-border-radius, 0.25rem);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  z-index: 200;
+}
+
+.settings-menu li {
+  padding: 0;
+  margin: 0;
+}
+
+.settings-menu-btn {
+  all: unset;
+  display: block;
+  width: 100%;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.9rem;
+  /* Explicit color: all:unset resets color; set it explicitly for both themes */
+  color: #1a1a2e;
+  cursor: pointer;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+.settings-menu-btn:hover {
+  background-color: color-mix(in srgb, #7c3aed 10%, transparent);
+  color: #7c3aed;
+}
+
+[data-theme="dark"] .settings-menu {
+  background-color: #1e1e2e;
+  color: #e5e7eb;
+  border-color: #374151;
+}
+
+[data-theme="dark"] .settings-menu-btn {
+  color: #e5e7eb;
+}
+
+[data-theme="dark"] .settings-gear-btn {
+  color: var(--pico-muted-color, #9ca3af) !important;
+}
+
+[data-theme="dark"] .settings-gear-btn:hover {
+  color: var(--pico-color, #e5e7eb) !important;
+}
+
+[data-theme="dark"] .settings-menu-btn:hover {
+  background-color: color-mix(in srgb, #a78bfa 15%, transparent);
+  color: #a78bfa;
+}
+
+/* Compact task/epic metadata row */
+.task-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3em;
+  font-size: 0.875rem;
+  color: var(--pico-muted-color, #6b7280);
+  margin-bottom: 1rem;
+}
+
+.meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  white-space: nowrap;
+}
+
+.meta-label {
+  font-weight: 500;
+  color: var(--pico-muted-color, #6b7280);
+}
+
+.meta-sep {
+  color: var(--pico-muted-border-color, #d1d5db);
+  user-select: none;
+}
+
+.task-description {
+  margin-bottom: 1.25rem;
+  color: var(--pico-color, inherit);
+}
+
+/* Epic badge — small linked pill used in list/board/detail views */
+.epic-badge {
+  display: inline-block;
+  border-radius: 1em;
+  padding: 0.1em 0.55em;
+  font-size: 0.72em;
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: nowrap;
+  text-decoration: none;
+  background-color: color-mix(in srgb, var(--pico-primary, #7c3aed) 10%, transparent);
+  color: var(--pico-primary, #7c3aed);
+  border: 1px solid color-mix(in srgb, var(--pico-primary, #7c3aed) 30%, transparent);
+  vertical-align: middle;
+  transition: background-color 0.15s;
+}
+
+.epic-badge:hover {
+  background-color: color-mix(in srgb, var(--pico-primary, #7c3aed) 18%, transparent);
+  text-decoration: none;
+}
+
+[data-theme="dark"] .epic-badge {
+  background-color: color-mix(in srgb, var(--pico-primary, #a78bfa) 15%, transparent);
+  color: var(--pico-primary, #a78bfa);
+  border-color: color-mix(in srgb, var(--pico-primary, #a78bfa) 35%, transparent);
+}
+
+[data-theme="dark"] .epic-badge:hover {
+  background-color: color-mix(in srgb, var(--pico-primary, #a78bfa) 25%, transparent);
+}
+
+[data-theme="dark"] .meta-sep {
+  color: var(--pico-muted-border-color, #374151);
+}
+
+/* Epic detail: divider between description and view toggle */
+.view-toggle-divider {
+  margin: 0.75rem 0;
+  border: none;
+  border-top: 1px solid var(--pico-muted-border-color, #d1d5db);
+}
+
+[data-theme="dark"] .view-toggle-divider {
+  border-top-color: var(--pico-muted-border-color, #374151);
+}
+
+/* Epic detail: right-aligned pill toggle button group */
+.view-toggle-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+
+.view-toggle-group {
+  display: inline-flex;
+  border: 1px solid var(--pico-primary, #7c3aed);
+  border-radius: 2em;
+  overflow: hidden;
+}
+
+.view-toggle-btn {
+  display: inline-block;
+  padding: 0.25em 0.9em;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: default;
+  background: transparent;
+  color: var(--pico-primary, #7c3aed);
+  border: none;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+a.view-toggle-btn {
+  cursor: pointer;
+}
+
+a.view-toggle-btn:hover {
+  background-color: color-mix(in srgb, var(--pico-primary, #7c3aed) 10%, transparent);
+  text-decoration: none;
+}
+
+.view-toggle-active {
+  background-color: var(--pico-primary, #7c3aed);
+  color: #fff;
+}
+
+[data-theme="dark"] .view-toggle-group {
+  border-color: var(--pico-primary, #a78bfa);
+}
+
+[data-theme="dark"] .view-toggle-btn {
+  color: var(--pico-primary, #a78bfa);
+}
+
+[data-theme="dark"] a.view-toggle-btn:hover {
+  background-color: color-mix(in srgb, var(--pico-primary, #a78bfa) 15%, transparent);
+}
+
+[data-theme="dark"] .view-toggle-active {
+  background-color: var(--pico-primary-background, #7c3aed);
+  color: #fff;
 }
 
 /* Priority badges — dark theme */

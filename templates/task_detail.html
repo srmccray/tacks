@@ -3,48 +3,44 @@
 {% block title %}{{ task.id }} — Tacks{% endblock %}
 
 {% block content %}
-<h1>{{ task.id }}</h1>
+<h1>{{ task.title }}</h1>
 
-<dl>
-  <dt>Title</dt>
-  <dd>{{ task.title }}</dd>
-  <dt>Status</dt>
-  <dd>
+<div class="task-meta-row">
+  <span class="meta-item"><span class="meta-label">ID</span> {{ task.id }}</span>
+  <span class="meta-sep">·</span>
+  <span class="meta-item">
     <span class="badge status-{{ task.status }}">
-      {%- if task.status == crate::models::Status::Open -%}
-        Open
-      {%- else if task.status == crate::models::Status::InProgress -%}
-        In Progress
-      {%- else if task.status == crate::models::Status::Done -%}
-        Done
-      {%- else -%}
-        Blocked
-      {%- endif -%}
+      {%- if task.status == crate::models::Status::Open -%}Open
+      {%- else if task.status == crate::models::Status::InProgress -%}In Progress
+      {%- else if task.status == crate::models::Status::Done -%}Done
+      {%- else -%}Blocked{%- endif -%}
     </span>
-  </dd>
-  <dt>Priority</dt>
-  <dd><span class="badge priority-{{ task.priority }}">P{{ task.priority }}</span></dd>
-  {% if let Some(assignee) = task.assignee.as_deref() %}
-  <dt>Assignee</dt>
-  <dd>{{ assignee }}</dd>
+  </span>
+  <span class="meta-sep">·</span>
+  <span class="meta-item"><span class="badge priority-{{ task.priority }}">P{{ task.priority }}</span></span>
+  {% if let Some(p) = parent.as_ref() %}
+  <span class="meta-sep">·</span>
+  <span class="meta-item"><span class="meta-label">Epic</span> <a href="/epics/{{ p.id }}" class="epic-badge">{{ p.id }}: {{ p.title }}</a></span>
   {% endif %}
-  {% if let Some(desc) = task.description.as_deref() %}
-  <dt>Description</dt>
-  <dd>{{ desc }}</dd>
+  {% if let Some(assignee) = task.assignee.as_deref() %}
+  <span class="meta-sep">·</span>
+  <span class="meta-item"><span class="meta-label">Assignee</span> {{ assignee }}</span>
   {% endif %}
   {% if !task.tags.is_empty() %}
-  <dt>Tags</dt>
-  <dd>
-    {% for tag in task.tags %}
-      <span class="tag-pill">{{ tag }}</span>
-    {% endfor %}
-  </dd>
+  <span class="meta-sep">·</span>
+  <span class="meta-item">
+    {% for tag in &task.tags %}<span class="tag-pill">{{ tag }}</span>{% endfor %}
+  </span>
   {% endif %}
-  <dt>Created</dt>
-  <dd>{{ task.created_at.format("%b %d, %Y %H:%M") }}</dd>
-  <dt>Updated</dt>
-  <dd>{{ task.updated_at.format("%b %d, %Y %H:%M") }}</dd>
-</dl>
+  <span class="meta-sep">·</span>
+  <span class="meta-item"><span class="meta-label">Created</span> {{ task.created_at.format("%b %d, %Y %H:%M") }}</span>
+  <span class="meta-sep">·</span>
+  <span class="meta-item"><span class="meta-label">Updated</span> {{ task.updated_at.format("%b %d, %Y %H:%M") }}</span>
+</div>
+
+{% if let Some(desc) = task.description.as_deref() %}
+<p class="task-description">{{ desc }}</p>
+{% endif %}
 
 {% if !blockers.is_empty() %}
 <section>

@@ -13,58 +13,50 @@
 
 <h1>{{ task.title }}</h1>
 
-<dl>
-  <dt>ID</dt>
-  <dd>{{ task.id }}</dd>
-  <dt>Status</dt>
-  <dd>
+<div class="task-meta-row">
+  <span class="meta-item"><span class="meta-label">ID</span> {{ task.id }}</span>
+  <span class="meta-sep">·</span>
+  <span class="meta-item">
     <span class="badge status-{{ task.status }}">
-      {%- if task.status == crate::models::Status::Open -%}
-        Open
-      {%- else if task.status == crate::models::Status::InProgress -%}
-        In Progress
-      {%- else if task.status == crate::models::Status::Done -%}
-        Done
-      {%- else -%}
-        Blocked
-      {%- endif -%}
+      {%- if task.status == crate::models::Status::Open -%}Open
+      {%- else if task.status == crate::models::Status::InProgress -%}In Progress
+      {%- else if task.status == crate::models::Status::Done -%}Done
+      {%- else -%}Blocked{%- endif -%}
     </span>
-  </dd>
-  <dt>Priority</dt>
-  <dd><span class="badge priority-{{ task.priority }}">P{{ task.priority }}</span></dd>
+  </span>
+  <span class="meta-sep">·</span>
+  <span class="meta-item"><span class="badge priority-{{ task.priority }}">P{{ task.priority }}</span></span>
+  <span class="meta-sep">·</span>
+  <span class="meta-item"><span class="meta-label">Progress</span> {{ children_done }}/{{ children_total }} done</span>
   {% if let Some(assignee) = task.assignee.as_deref() %}
-  <dt>Assignee</dt>
-  <dd>{{ assignee }}</dd>
-  {% endif %}
-  {% if let Some(desc) = task.description.as_deref() %}
-  <dt>Description</dt>
-  <dd>{{ desc }}</dd>
+  <span class="meta-sep">·</span>
+  <span class="meta-item"><span class="meta-label">Assignee</span> {{ assignee }}</span>
   {% endif %}
   {% if !task.tags.is_empty() %}
-  <dt>Tags</dt>
-  <dd>
-    {% for tag in &task.tags %}
-      <span class="tag-pill">{{ tag }}</span>
-    {% endfor %}
-  </dd>
+  <span class="meta-sep">·</span>
+  <span class="meta-item">
+    {% for tag in &task.tags %}<span class="tag-pill">{{ tag }}</span>{% endfor %}
+  </span>
   {% endif %}
-  <dt>Progress</dt>
-  <dd>{{ children_done }}/{{ children_total }} done</dd>
-</dl>
+</div>
 
-<nav class="view-toggle" style="margin-bottom: 1rem;">
-  {% if view == "list" %}
-  <strong>List</strong>
-  &nbsp;|&nbsp;
-  <a href="/epics/{{ task.id }}?view=board">Board</a>
-  {% else %}
-  <a href="/epics/{{ task.id }}?view=list">List</a>
-  &nbsp;|&nbsp;
-  <strong>Board</strong>
-  {% endif %}
-</nav>
+{% if let Some(desc) = task.description.as_deref() %}
+<p class="task-description">{{ desc }}</p>
+{% endif %}
 
-<h2>Tasks</h2>
+<hr class="view-toggle-divider">
+
+<div class="view-toggle-row">
+  <div class="view-toggle-group">
+    {% if view == "list" %}
+    <span class="view-toggle-btn view-toggle-active">List</span>
+    <a href="/epics/{{ task.id }}?view=board" class="view-toggle-btn">Board</a>
+    {% else %}
+    <a href="/epics/{{ task.id }}?view=list" class="view-toggle-btn">List</a>
+    <span class="view-toggle-btn view-toggle-active">Board</span>
+    {% endif %}
+  </div>
+</div>
 
 {% if view == "list" %}
 
@@ -110,12 +102,15 @@
     <h3>Open</h3>
     {% for child in &children %}
     {%- if child.status == crate::models::Status::Open -%}
-    <article>
+    <article class="board-card">
       <a href="/tasks/{{ child.id }}"
          hx-get="/tasks/{{ child.id }}"
          hx-target="#task-modal"
          hx-select="unset"
          hx-swap="innerHTML">{{ child.title }}</a>
+      <footer class="board-card-footer">
+        <span class="badge priority-{{ child.priority }}">P{{ child.priority }}</span>
+      </footer>
     </article>
     {%- endif -%}
     {% endfor %}
@@ -124,12 +119,15 @@
     <h3>In Progress</h3>
     {% for child in &children %}
     {%- if child.status == crate::models::Status::InProgress -%}
-    <article>
+    <article class="board-card">
       <a href="/tasks/{{ child.id }}"
          hx-get="/tasks/{{ child.id }}"
          hx-target="#task-modal"
          hx-select="unset"
          hx-swap="innerHTML">{{ child.title }}</a>
+      <footer class="board-card-footer">
+        <span class="badge priority-{{ child.priority }}">P{{ child.priority }}</span>
+      </footer>
     </article>
     {%- endif -%}
     {% endfor %}
@@ -138,12 +136,15 @@
     <h3>Blocked</h3>
     {% for child in &children %}
     {%- if child.status == crate::models::Status::Blocked -%}
-    <article>
+    <article class="board-card">
       <a href="/tasks/{{ child.id }}"
          hx-get="/tasks/{{ child.id }}"
          hx-target="#task-modal"
          hx-select="unset"
          hx-swap="innerHTML">{{ child.title }}</a>
+      <footer class="board-card-footer">
+        <span class="badge priority-{{ child.priority }}">P{{ child.priority }}</span>
+      </footer>
     </article>
     {%- endif -%}
     {% endfor %}
@@ -152,12 +153,15 @@
     <h3>Done</h3>
     {% for child in &children %}
     {%- if child.status == crate::models::Status::Done -%}
-    <article>
+    <article class="board-card">
       <a href="/tasks/{{ child.id }}"
          hx-get="/tasks/{{ child.id }}"
          hx-target="#task-modal"
          hx-select="unset"
          hx-swap="innerHTML">{{ child.title }}</a>
+      <footer class="board-card-footer">
+        <span class="badge priority-{{ child.priority }}">P{{ child.priority }}</span>
+      </footer>
     </article>
     {%- endif -%}
     {% endfor %}

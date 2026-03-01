@@ -658,11 +658,50 @@ pub async fn api_poll(State(state): State<AppState>) -> Response {
 // HTML view handlers
 // ---------------------------------------------------------------------------
 
+/// A task row enriched with optional parent info for list/board views.
+struct TaskRow {
+    task: Task,
+    /// Parent epic ID, if this task is a subtask.
+    parent_id: Option<String>,
+    /// Parent epic title, if this task is a subtask.
+    parent_title: Option<String>,
+}
+
+impl TaskRow {
+    /// Build a `TaskRow` from a task, looking up parent title from the provided map.
+    fn from_task(task: Task, parents: &std::collections::HashMap<String, Task>) -> Self {
+        let parent_id = task.parent_id.clone();
+        let parent_title = parent_id
+            .as_deref()
+            .and_then(|pid| parents.get(pid))
+            .map(|p| p.title.clone());
+        TaskRow {
+            task,
+            parent_id,
+            parent_title,
+        }
+    }
+}
+
+/// Fetch a map of task_id -> Task for a set of IDs (used to batch-load parent epics).
+fn fetch_parent_map(
+    db: &crate::db::Database,
+    ids: impl Iterator<Item = String>,
+) -> Result<std::collections::HashMap<String, Task>, String> {
+    let mut map = std::collections::HashMap::new();
+    for id in ids {
+        if let Some(t) = db.get_task(&id)? {
+            map.insert(id, t);
+        }
+    }
+    Ok(map)
+}
+
 /// Template for the task list page at GET /tasks.
 #[derive(Template)]
 #[template(path = "tasks_list.html")]
 struct TaskListTemplate {
-    tasks: Vec<Task>,
+    tasks: Vec<TaskRow>,
     status_filter: Option<String>,
     priority_filter: Option<String>,
     tag_filter: Option<String>,
@@ -676,6 +715,8 @@ struct TaskListTemplate {
 #[template(path = "task_detail.html")]
 struct TaskDetailTemplate {
     task: Task,
+    /// Parent epic, if this task is a subtask.
+    parent: Option<Task>,
     blockers: Vec<Task>,
     dependents: Vec<Task>,
     comments: Vec<Comment>,
@@ -686,6 +727,8 @@ struct TaskDetailTemplate {
 #[template(path = "task_detail_fragment.html")]
 struct TaskDetailFragmentTemplate {
     task: Task,
+    /// Parent epic, if this task is a subtask.
+    parent: Option<Task>,
     blockers: Vec<Task>,
     dependents: Vec<Task>,
     comments: Vec<Comment>,
@@ -695,10 +738,10 @@ struct TaskDetailFragmentTemplate {
 #[derive(Template)]
 #[template(path = "board.html")]
 struct BoardTemplate {
-    open_tasks: Vec<Task>,
-    in_progress_tasks: Vec<Task>,
-    blocked_tasks: Vec<Task>,
-    done_tasks: Vec<Task>,
+    open_tasks: Vec<TaskRow>,
+    in_progress_tasks: Vec<TaskRow>,
+    blocked_tasks: Vec<TaskRow>,
+    done_tasks: Vec<TaskRow>,
     /// All epics available in the dropdown filter.
     epics: Vec<Task>,
     /// Currently selected epic ID filter (empty string = none).
@@ -798,16 +841,24 @@ pub async fn task_list(
     let search_filter = params.search.clone();
 
     let db = state.db.clone();
-    let tasks = tokio::task::spawn_blocking(move || {
+    let task_rows = tokio::task::spawn_blocking(move || -> Result<Vec<TaskRow>, String> {
         let db = db.lock().unwrap();
-        db.list_tasks(
+        let tasks = db.list_tasks(
             show_all,
             status_filter.as_deref(),
             priority_filter,
             tag_filter.as_deref(),
             None,
             search_filter.as_deref(),
-        )
+        )?;
+        // Batch-load parent epics (avoids N+1: one lookup per unique parent_id)
+        let parent_ids: std::collections::HashSet<String> =
+            tasks.iter().filter_map(|t| t.parent_id.clone()).collect();
+        let parents = fetch_parent_map(&db, parent_ids.into_iter())?;
+        Ok(tasks
+            .into_iter()
+            .map(|t| TaskRow::from_task(t, &parents))
+            .collect())
     })
     .await
     .unwrap()
@@ -816,7 +867,7 @@ pub async fn task_list(
     let poll_query = build_poll_query(&params.status, params.priority, &params.tag, &params.search);
 
     render_template(TaskListTemplate {
-        tasks,
+        tasks: task_rows,
         status_filter: params.status,
         priority_filter: params.priority.map(|p| p.to_string()),
         tag_filter: params.tag,
@@ -833,6 +884,8 @@ pub async fn task_new() -> Response {
 /// All data needed to render a task detail view (full page or modal fragment).
 struct TaskDetailData {
     task: Task,
+    /// Parent epic, if this task is a subtask.
+    parent: Option<Task>,
     blockers: Vec<Task>,
     dependents: Vec<Task>,
     comments: Vec<Comment>,
@@ -855,6 +908,12 @@ pub async fn task_detail(
             Some(t) => t,
             None => return Ok(None),
         };
+        // Fetch parent epic if this task is a subtask
+        let parent = if let Some(ref pid) = task.parent_id {
+            db.get_task(pid)?
+        } else {
+            None
+        };
         // Resolve blocker dependency records to full Task objects
         let blocker_deps = db.get_blockers(&id)?;
         let mut blockers = Vec::with_capacity(blocker_deps.len());
@@ -867,6 +926,7 @@ pub async fn task_detail(
         let comments = db.get_comments(&id)?;
         Ok(Some(TaskDetailData {
             task,
+            parent,
             blockers,
             dependents,
             comments,
@@ -880,6 +940,7 @@ pub async fn task_detail(
             if is_htmx {
                 render_template(TaskDetailFragmentTemplate {
                     task: data.task,
+                    parent: data.parent,
                     blockers: data.blockers,
                     dependents: data.dependents,
                     comments: data.comments,
@@ -887,6 +948,7 @@ pub async fn task_detail(
             } else {
                 render_template(TaskDetailTemplate {
                     task: data.task,
+                    parent: data.parent,
                     blockers: data.blockers,
                     dependents: data.dependents,
                     comments: data.comments,
@@ -943,10 +1005,45 @@ pub async fn board(State(state): State<AppState>, Query(query): Query<BoardQuery
             )
         };
 
-        let open_tasks = fetch("open", false)?;
-        let in_progress_tasks = fetch("in_progress", false)?;
-        let blocked_tasks = fetch("blocked", false)?;
-        let done_tasks = fetch("done", true)?;
+        // Fetch the set of task IDs that have at least one open blocker (via dep graph).
+        // These tasks belong in the Blocked column regardless of their `status` field,
+        // because `dep add` does not automatically change a task's status to "blocked".
+        let dep_blocked_ids: std::collections::HashSet<String> =
+            db.get_blocked_tasks()?.into_iter().map(|t| t.id).collect();
+
+        // Fetch open tasks, then split: those with open blockers go to the blocked column.
+        let open_raw = fetch("open", false)?;
+        let (dep_blocked_open, open_raw_filtered): (Vec<Task>, Vec<Task>) = open_raw
+            .into_iter()
+            .partition(|t| dep_blocked_ids.contains(&t.id));
+
+        let in_progress_raw = fetch("in_progress", false)?;
+        // Combine status=blocked tasks with open tasks that have active dep blockers.
+        let mut blocked_raw = fetch("blocked", false)?;
+        blocked_raw.extend(dep_blocked_open);
+        let done_raw = fetch("done", true)?;
+
+        // Batch-load all unique parent epics across all columns
+        let all_tasks_iter = open_raw_filtered
+            .iter()
+            .chain(in_progress_raw.iter())
+            .chain(blocked_raw.iter())
+            .chain(done_raw.iter());
+        let parent_ids: std::collections::HashSet<String> =
+            all_tasks_iter.filter_map(|t| t.parent_id.clone()).collect();
+        let parents = fetch_parent_map(&db, parent_ids.into_iter())?;
+
+        let to_rows = |tasks: Vec<Task>| -> Vec<TaskRow> {
+            tasks
+                .into_iter()
+                .map(|t| TaskRow::from_task(t, &parents))
+                .collect()
+        };
+
+        let open_tasks = to_rows(open_raw_filtered);
+        let in_progress_tasks = to_rows(in_progress_raw);
+        let blocked_tasks = to_rows(blocked_raw);
+        let done_tasks = to_rows(done_raw);
 
         let selected_epic = epic_filter.clone().unwrap_or_default();
         let selected_priority = priority_filter.map(|p| p.to_string()).unwrap_or_default();
@@ -1032,7 +1129,14 @@ pub async fn epic_detail(
                 Some(t) => t,
                 None => return Ok(None),
             };
-            let children = db.get_children(&id)?;
+            let mut children = db.get_children(&id)?;
+            // Sort children by the numeric suffix of their hierarchical ID (e.g. `tk-xxxx.N`)
+            // so that ordering is 1, 2, 3 … 10, 11 rather than lexicographic 1, 10, 11 … 2.
+            children.sort_by_key(|c| {
+                c.id.rfind('.')
+                    .and_then(|pos| c.id[pos + 1..].parse::<u64>().ok())
+                    .unwrap_or(0)
+            });
             let children_total = children.len();
             let children_done = children
                 .iter()

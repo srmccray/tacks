@@ -109,7 +109,7 @@ Defined in `.claude/team.yaml`. Three agents with file ownership:
 
 | Agent | Owns | Role |
 |-------|------|------|
-| core-dev | `src/commands/**`, `src/models/**`, `src/main.rs` | CLI commands, models, wiring |
+| core-dev | `src/commands/**`, `src/models/**`, `src/main.rs`, `src/lib.rs`, `src/web/**`, `templates/**`, `static/**` | CLI commands, web UI, models, wiring |
 | bdd | `tests/**` | BDD feature files, step definitions, harness |
 | db | `src/db/**` | Schema, migrations, queries, data integrity |
 

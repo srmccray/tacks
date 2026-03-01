@@ -8,12 +8,16 @@ defaults:
 
 members:
   - name: core-dev
-    role: "Implement CLI commands, models, and command wiring"
+    role: "Implement CLI commands, web UI, models, templates, and command wiring"
     tools: [Read, Write, Edit, Bash, Glob, Grep]
     owns:
       - "src/commands/**"
       - "src/models/**"
       - "src/main.rs"
+      - "src/lib.rs"
+      - "src/web/**"
+      - "templates/**"
+      - "static/**"
 
   - name: bdd
     role: "BDD test infrastructure with cucumber-rs: feature files, step definitions, harness"

@@ -16,15 +16,22 @@
     <script src="/static/app.js" defer></script>
 </head>
 <body>
-    <nav class="container">
+    <nav class="container nav-tabs">
         <ul>
             <li><strong>Tacks</strong></li>
         </ul>
         <ul>
-            <li><a href="/tasks" hx-get="/tasks" hx-target="#main" hx-select="#main" hx-swap="outerHTML" hx-push-url="true">Issues</a></li>
-            <li><a href="/board" hx-get="/board" hx-target="#main" hx-select="#main" hx-swap="outerHTML" hx-push-url="true">Board</a></li>
-            <li><a href="/epics" hx-get="/epics" hx-target="#main" hx-select="#main" hx-swap="outerHTML" hx-push-url="true">Epics</a></li>
-            <li><button id="theme-toggle" class="outline secondary" style="padding: 0.25rem 0.6rem; font-size: 0.85em;">&#9680; Theme</button></li>
+            <li><a id="nav-issues" href="/tasks" hx-get="/tasks" hx-target="#main" hx-select="#main" hx-swap="outerHTML" hx-push-url="true">Issues</a></li>
+            <li><a id="nav-board" href="/board" hx-get="/board" hx-target="#main" hx-select="#main" hx-swap="outerHTML" hx-push-url="true">Board</a></li>
+            <li><a id="nav-epics" href="/epics" hx-get="/epics" hx-target="#main" hx-select="#main" hx-swap="outerHTML" hx-push-url="true">Epics</a></li>
+            <li>
+                <div class="settings-dropdown" id="settings-dropdown">
+                    <button id="settings-gear" class="outline secondary settings-gear-btn" aria-label="Settings" aria-expanded="false">&#9881;</button>
+                    <ul class="settings-menu" id="settings-menu" hidden>
+                        <li><button id="theme-toggle" class="settings-menu-btn">&#9680; Toggle dark mode</button></li>
+                    </ul>
+                </div>
+            </li>
         </ul>
     </nav>
     <main class="container" id="main">

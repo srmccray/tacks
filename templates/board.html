@@ -5,8 +5,6 @@
 {% block content %}
 <div id="content-area">
 
-<h1>Board</h1>
-
 <form method="get" action="/board"
       hx-get="/board"
       hx-trigger="change from:select"
@@ -38,49 +36,61 @@
      hx-select="#board-columns">
   <div>
     <h2>Open</h2>
-    {% for task in open_tasks %}
-    <article>
-      <a href="/tasks/{{ task.id }}"
-         hx-get="/tasks/{{ task.id }}"
-         hx-target="#task-modal"
-         hx-select="unset"
-         hx-swap="innerHTML">{{ task.title }}</a>
+    {% for row in open_tasks %}
+    <article class="board-card">
+      <div class="board-card-header">
+        <a href="/tasks/{{ row.task.id }}"
+           hx-get="/tasks/{{ row.task.id }}"
+           hx-target="#task-modal"
+           hx-select="unset"
+           hx-swap="innerHTML">{{ row.task.title }}</a>
+        <span class="badge priority-{{ row.task.priority }}">P{{ row.task.priority }}</span>
+      </div>
     </article>
     {% endfor %}
   </div>
   <div>
     <h2>In Progress</h2>
-    {% for task in in_progress_tasks %}
-    <article>
-      <a href="/tasks/{{ task.id }}"
-         hx-get="/tasks/{{ task.id }}"
-         hx-target="#task-modal"
-         hx-select="unset"
-         hx-swap="innerHTML">{{ task.title }}</a>
+    {% for row in in_progress_tasks %}
+    <article class="board-card">
+      <div class="board-card-header">
+        <a href="/tasks/{{ row.task.id }}"
+           hx-get="/tasks/{{ row.task.id }}"
+           hx-target="#task-modal"
+           hx-select="unset"
+           hx-swap="innerHTML">{{ row.task.title }}</a>
+        <span class="badge priority-{{ row.task.priority }}">P{{ row.task.priority }}</span>
+      </div>
     </article>
     {% endfor %}
   </div>
   <div>
     <h2>Blocked</h2>
-    {% for task in blocked_tasks %}
-    <article>
-      <a href="/tasks/{{ task.id }}"
-         hx-get="/tasks/{{ task.id }}"
-         hx-target="#task-modal"
-         hx-select="unset"
-         hx-swap="innerHTML">{{ task.title }}</a>
+    {% for row in blocked_tasks %}
+    <article class="board-card">
+      <div class="board-card-header">
+        <a href="/tasks/{{ row.task.id }}"
+           hx-get="/tasks/{{ row.task.id }}"
+           hx-target="#task-modal"
+           hx-select="unset"
+           hx-swap="innerHTML">{{ row.task.title }}</a>
+        <span class="badge priority-{{ row.task.priority }}">P{{ row.task.priority }}</span>
+      </div>
     </article>
     {% endfor %}
   </div>
   <div>
     <h2>Done</h2>
-    {% for task in done_tasks %}
-    <article>
-      <a href="/tasks/{{ task.id }}"
-         hx-get="/tasks/{{ task.id }}"
-         hx-target="#task-modal"
-         hx-select="unset"
-         hx-swap="innerHTML">{{ task.title }}</a>
+    {% for row in done_tasks %}
+    <article class="board-card">
+      <div class="board-card-header">
+        <a href="/tasks/{{ row.task.id }}"
+           hx-get="/tasks/{{ row.task.id }}"
+           hx-target="#task-modal"
+           hx-select="unset"
+           hx-swap="innerHTML">{{ row.task.title }}</a>
+        <span class="badge priority-{{ row.task.priority }}">P{{ row.task.priority }}</span>
+      </div>
     </article>
     {% endfor %}
   </div>
