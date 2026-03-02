@@ -1065,6 +1065,20 @@ a.view-toggle-btn:hover {
   border-color: #1e3a5f;
 }
 
+/* --- Screen reader only utility --- */
+/* Visually hidden but accessible to screen readers (WCAG technique G1) */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* --- Focus indicators (:focus-visible) --- */
 /*
  * Consistent 2px solid outline using the project purple (--pico-primary).

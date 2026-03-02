@@ -14,7 +14,7 @@
       hx-push-url="true">
   <div class="grid">
     <div class="filter-multiselect" id="status-multiselect">
-      <div class="filter-multiselect-trigger" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
+      <div class="filter-multiselect-trigger" tabindex="0" aria-haspopup="listbox" aria-expanded="false" aria-label="Filter by status">
         <span class="filter-multiselect-pills"></span>
         <span class="filter-multiselect-placeholder">All statuses</span>
       </div>
@@ -27,7 +27,7 @@
       <input type="hidden" name="status" id="status-hidden-input" value="{{ status_filter.as_deref().unwrap_or_default() }}">
     </div>
     <div class="filter-multiselect" id="priority-multiselect">
-      <div class="filter-multiselect-trigger" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
+      <div class="filter-multiselect-trigger" tabindex="0" aria-haspopup="listbox" aria-expanded="false" aria-label="Filter by priority">
         <span class="filter-multiselect-pills"></span>
         <span class="filter-multiselect-placeholder">All priorities</span>
       </div>
@@ -40,7 +40,7 @@
       <input type="hidden" name="priority" id="priority-hidden-input" value="{{ priority_filter.as_deref().unwrap_or_default() }}">
     </div>
     <div class="tag-multiselect" id="tag-multiselect">
-      <div class="tag-multiselect-trigger" id="tag-multiselect-trigger" role="button" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
+      <div class="tag-multiselect-trigger" id="tag-multiselect-trigger" role="button" tabindex="0" aria-haspopup="listbox" aria-expanded="false" aria-label="Filter by tag">
         <span class="tag-multiselect-pills" id="tag-multiselect-pills">
           {% for tag in &selected_tags %}
           <span class="filter-tag-pill" data-tag="{{ tag }}">
@@ -69,7 +69,10 @@
       </ul>
       <input type="hidden" name="tag" value="{{ tag_filter.as_deref().unwrap_or_default() }}" id="tag-hidden-input">
     </div>
-    <input type="text" name="search" placeholder="Search titles..." value="{{ search_filter.as_deref().unwrap_or_default() }}">
+    <div role="search">
+      <label for="search-input" class="sr-only">Search tasks by title</label>
+      <input type="text" id="search-input" name="search" placeholder="Search titles..." value="{{ search_filter.as_deref().unwrap_or_default() }}" aria-label="Search tasks by title">
+    </div>
     <noscript><button type="submit">Filter</button></noscript>
   </div>
 </form>
