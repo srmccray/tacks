@@ -872,6 +872,11 @@ struct EpicDetailTemplate {
     children: Vec<Task>,
     children_done: usize,
     children_total: usize,
+    /// Pre-computed per-status counts for board view column headers.
+    board_open_count: usize,
+    board_in_progress_count: usize,
+    board_blocked_count: usize,
+    board_done_count: usize,
     /// Current view mode: "list" (default) or "board".
     view: String,
 }
@@ -1367,11 +1372,27 @@ pub async fn epic_detail(
                 .iter()
                 .filter(|c| matches!(c.status, crate::models::Status::Done))
                 .count();
+            let board_open_count = children
+                .iter()
+                .filter(|c| matches!(c.status, crate::models::Status::Open))
+                .count();
+            let board_in_progress_count = children
+                .iter()
+                .filter(|c| matches!(c.status, crate::models::Status::InProgress))
+                .count();
+            let board_blocked_count = children
+                .iter()
+                .filter(|c| matches!(c.status, crate::models::Status::Blocked))
+                .count();
             Ok(Some(EpicDetailTemplate {
                 task,
                 children,
                 children_done,
                 children_total,
+                board_open_count,
+                board_in_progress_count,
+                board_blocked_count,
+                board_done_count: children_done,
                 view: view_clone,
             }))
         })

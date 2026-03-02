@@ -105,7 +105,7 @@
 {% else %}
 <div class="grid">
   <div class="board-column" data-status="open">
-    <h3>Open</h3>
+    <h3>Open <span class="column-count">({{ board_open_count }})</span></h3>
     {% for child in &children %}
     {%- if child.status == crate::models::Status::Open -%}
     <article class="board-card" draggable="true" data-task-id="{{ child.id }}">
@@ -124,7 +124,7 @@
     {% endfor %}
   </div>
   <div class="board-column" data-status="in_progress">
-    <h3>In Progress</h3>
+    <h3>In Progress <span class="column-count">({{ board_in_progress_count }})</span></h3>
     {% for child in &children %}
     {%- if child.status == crate::models::Status::InProgress -%}
     <article class="board-card" draggable="true" data-task-id="{{ child.id }}">
@@ -143,7 +143,7 @@
     {% endfor %}
   </div>
   <div class="board-column" data-status="blocked">
-    <h3>Blocked</h3>
+    <h3>Blocked <span class="column-count">({{ board_blocked_count }})</span></h3>
     {% for child in &children %}
     {%- if child.status == crate::models::Status::Blocked -%}
     <article class="board-card" draggable="true" data-task-id="{{ child.id }}">
@@ -162,7 +162,7 @@
     {% endfor %}
   </div>
   <div class="board-column" data-status="done">
-    <h3>Done</h3>
+    <h3>Done <span class="column-count">({{ board_done_count }})</span></h3>
     {% for child in &children %}
     {%- if child.status == crate::models::Status::Done -%}
     <article class="board-card" draggable="true" data-task-id="{{ child.id }}">

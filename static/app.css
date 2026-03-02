@@ -956,6 +956,13 @@ a.view-toggle-btn:hover {
 .board-column h3 {
   margin-bottom: 0.75rem;
 }
+
+/* Column task count — subtle parenthetical next to column heading */
+.column-count {
+  font-size: 0.75em;
+  font-weight: 400;
+  color: var(--pico-muted-color, #6b7280);
+}
 /* Column receiving a drag: highlight as valid drop target */
 .board-column.drag-over {
   background-color: color-mix(in srgb, var(--pico-primary, #7c3aed) 8%, transparent);
