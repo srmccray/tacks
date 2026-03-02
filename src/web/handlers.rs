@@ -94,18 +94,6 @@ where
     }
 }
 
-/// Deserialize an optional numeric field that may arrive as an empty string.
-fn deserialize_optional_u8<'de, D>(deserializer: D) -> Result<Option<u8>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    let s: Option<String> = Option::deserialize(deserializer)?;
-    match s.as_deref() {
-        None | Some("") => Ok(None),
-        Some(v) => v.parse::<u8>().map(Some).map_err(serde::de::Error::custom),
-    }
-}
-
 /// Query parameters for GET /api/tasks.
 ///
 /// `status` and `priority` accept comma-separated values for multi-select OR filtering
@@ -853,10 +841,12 @@ struct BoardTemplate {
 /// Query parameters for GET /board.
 #[derive(Debug, Deserialize)]
 pub struct BoardQuery {
+    /// Comma-separated epic IDs for multi-select OR filtering (e.g. `epic=tk-abc1,tk-def2`).
     #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub epic: Option<String>,
-    #[serde(default, deserialize_with = "deserialize_optional_u8")]
-    pub priority: Option<u8>,
+    /// Comma-separated priority values for multi-select OR filtering (e.g. `priority=1,2`).
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
+    pub priority: Option<String>,
 }
 
 /// Template struct for one row in the epics view.
@@ -1118,7 +1108,7 @@ pub async fn task_detail(
 }
 
 /// Build a poll query string for the board view (preserves epic + priority filters).
-fn build_board_poll_query(epic: &Option<String>, priority: Option<u8>) -> String {
+fn build_board_poll_query(epic: &Option<String>, priority: &Option<String>) -> String {
     let mut parts = Vec::new();
     if let Some(e) = epic {
         parts.push(format!("epic={e}"));
@@ -1136,7 +1126,7 @@ fn build_board_poll_query(epic: &Option<String>, priority: Option<u8>) -> String
 /// GET /board — Kanban board view grouped by status, with optional epic and priority filters.
 pub async fn board(State(state): State<AppState>, Query(query): Query<BoardQuery>) -> Response {
     let epic_filter = query.epic.clone();
-    let priority_filter = query.priority;
+    let priority_filter = query.priority.clone();
 
     let db = state.db.clone();
     let result = tokio::task::spawn_blocking(move || -> Result<BoardTemplate, String> {
@@ -1145,17 +1135,23 @@ pub async fn board(State(state): State<AppState>, Query(query): Query<BoardQuery
         // Fetch all epics for the dropdown.
         let epics = db.list_tasks(true, None, None, Some("epic"), None, None)?;
 
+        // Parse multi-select values.
+        let epic_values = parse_status_values(&epic_filter); // epic IDs are strings
+        let priority_values = parse_priority_values(&priority_filter);
+
         // Helper: fetch tasks for a given status, applying epic and priority filters.
+        // For single values, pass directly to DB for efficiency; for multi-values, post-filter.
         let fetch = |status: &str, show_done: bool| -> Result<Vec<Task>, String> {
-            let parent_filter = epic_filter.as_deref();
-            db.list_tasks(
-                show_done,
-                Some(status),
-                priority_filter,
-                None,
-                parent_filter,
-                None,
-            )
+            let (db_parent, db_priority) = match (epic_values.len(), priority_values.len()) {
+                (1, 1) => (
+                    epic_values.first().map(|s| s.as_str()),
+                    priority_values.first().copied(),
+                ),
+                (1, _) => (epic_values.first().map(|s| s.as_str()), None),
+                (_, 1) => (None, priority_values.first().copied()),
+                _ => (None, None),
+            };
+            db.list_tasks(show_done, Some(status), db_priority, None, db_parent, None)
         };
 
         // Fetch the set of task IDs that have at least one open blocker (via dep graph).
@@ -1175,6 +1171,26 @@ pub async fn board(State(state): State<AppState>, Query(query): Query<BoardQuery
         let mut blocked_raw = fetch("blocked", false)?;
         blocked_raw.extend(dep_blocked_open);
         let done_raw = fetch("done", true)?;
+
+        // Post-filter for multi-value epic or priority selections.
+        let post_filter = |mut tasks: Vec<Task>| -> Vec<Task> {
+            if epic_values.len() > 1 {
+                tasks.retain(|t| {
+                    t.parent_id
+                        .as_deref()
+                        .is_some_and(|pid| epic_values.contains(&pid.to_string()))
+                });
+            }
+            if priority_values.len() > 1 {
+                tasks.retain(|t| priority_values.contains(&t.priority));
+            }
+            tasks
+        };
+
+        let open_raw_filtered = post_filter(open_raw_filtered);
+        let in_progress_raw = post_filter(in_progress_raw);
+        let blocked_raw = post_filter(blocked_raw);
+        let done_raw = post_filter(done_raw);
 
         // Batch-load all unique parent epics across all columns
         let all_tasks_iter = open_raw_filtered
@@ -1199,8 +1215,8 @@ pub async fn board(State(state): State<AppState>, Query(query): Query<BoardQuery
         let done_tasks = to_rows(done_raw);
 
         let selected_epic = epic_filter.clone().unwrap_or_default();
-        let selected_priority = priority_filter.map(|p| p.to_string()).unwrap_or_default();
-        let poll_query = build_board_poll_query(&epic_filter, priority_filter);
+        let selected_priority = priority_filter.clone().unwrap_or_default();
+        let poll_query = build_board_poll_query(&epic_filter, &priority_filter);
 
         Ok(BoardTemplate {
             open_tasks,
