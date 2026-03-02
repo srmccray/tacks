@@ -44,7 +44,9 @@
            hx-target="#task-modal"
            hx-select="unset"
            hx-swap="innerHTML">{{ row.task.title }}</a>
-        <span class="badge priority-{{ row.task.priority }}">P{{ row.task.priority }}</span>
+        <span class="badge priority-{{ row.task.priority }}">
+          {%- if row.task.priority == 1 -%}▲ P1{%- else if row.task.priority == 2 -%}▬ P2{%- else if row.task.priority == 3 -%}▽ P3{%- else -%}· P4{%- endif -%}
+        </span>
       </div>
     </article>
     {% endfor %}
@@ -59,7 +61,9 @@
            hx-target="#task-modal"
            hx-select="unset"
            hx-swap="innerHTML">{{ row.task.title }}</a>
-        <span class="badge priority-{{ row.task.priority }}">P{{ row.task.priority }}</span>
+        <span class="badge priority-{{ row.task.priority }}">
+          {%- if row.task.priority == 1 -%}▲ P1{%- else if row.task.priority == 2 -%}▬ P2{%- else if row.task.priority == 3 -%}▽ P3{%- else -%}· P4{%- endif -%}
+        </span>
       </div>
     </article>
     {% endfor %}
@@ -74,7 +78,9 @@
            hx-target="#task-modal"
            hx-select="unset"
            hx-swap="innerHTML">{{ row.task.title }}</a>
-        <span class="badge priority-{{ row.task.priority }}">P{{ row.task.priority }}</span>
+        <span class="badge priority-{{ row.task.priority }}">
+          {%- if row.task.priority == 1 -%}▲ P1{%- else if row.task.priority == 2 -%}▬ P2{%- else if row.task.priority == 3 -%}▽ P3{%- else -%}· P4{%- endif -%}
+        </span>
       </div>
     </article>
     {% endfor %}
@@ -89,7 +95,9 @@
            hx-target="#task-modal"
            hx-select="unset"
            hx-swap="innerHTML">{{ row.task.title }}</a>
-        <span class="badge priority-{{ row.task.priority }}">P{{ row.task.priority }}</span>
+        <span class="badge priority-{{ row.task.priority }}">
+          {%- if row.task.priority == 1 -%}▲ P1{%- else if row.task.priority == 2 -%}▬ P2{%- else if row.task.priority == 3 -%}▽ P3{%- else -%}· P4{%- endif -%}
+        </span>
       </div>
     </article>
     {% endfor %}

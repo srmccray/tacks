@@ -40,64 +40,67 @@
 }
 
 /* Status badges — light theme */
+/* Backgrounds raised to 20% for better visible contrast against page bg */
 .badge.status-open {
-  background-color: color-mix(in srgb, #3b82f6 15%, transparent);
-  color: #2563eb;
+  background-color: color-mix(in srgb, #3b82f6 20%, transparent);
+  color: #1d4ed8;
 }
 
 .badge.status-in_progress {
-  background-color: color-mix(in srgb, #f59e0b 15%, transparent);
-  color: #b45309;
+  background-color: color-mix(in srgb, #f59e0b 20%, transparent);
+  color: #92400e;
 }
 
 .badge.status-done {
-  background-color: color-mix(in srgb, #22c55e 15%, transparent);
-  color: #15803d;
+  background-color: color-mix(in srgb, #22c55e 20%, transparent);
+  color: #166534;
 }
 
 .badge.status-blocked {
-  background-color: color-mix(in srgb, #ef4444 15%, transparent);
-  color: #b91c1c;
+  background-color: color-mix(in srgb, #ef4444 20%, transparent);
+  color: #991b1b;
 }
 
 /* Status badges — dark theme overrides */
+/* 30% backgrounds, lighter text for ≥4.5:1 on dark page backgrounds */
 [data-theme="dark"] .badge.status-open {
-  background-color: color-mix(in srgb, #3b82f6 25%, transparent);
-  color: #60a5fa;
+  background-color: color-mix(in srgb, #3b82f6 30%, transparent);
+  color: #93c5fd;
 }
 
 [data-theme="dark"] .badge.status-in_progress {
-  background-color: color-mix(in srgb, #f59e0b 25%, transparent);
-  color: #fbbf24;
+  background-color: color-mix(in srgb, #f59e0b 30%, transparent);
+  color: #fde68a;
 }
 
 [data-theme="dark"] .badge.status-done {
-  background-color: color-mix(in srgb, #22c55e 25%, transparent);
-  color: #4ade80;
+  background-color: color-mix(in srgb, #22c55e 30%, transparent);
+  color: #86efac;
 }
 
 [data-theme="dark"] .badge.status-blocked {
-  background-color: color-mix(in srgb, #ef4444 25%, transparent);
-  color: #f87171;
+  background-color: color-mix(in srgb, #ef4444 30%, transparent);
+  color: #fca5a5;
 }
 
 /* Tag pills */
+/* Explicit fallback colors chosen for ≥4.5:1 contrast on white/dark backgrounds */
 .tag-pill {
   display: inline-block;
   border-radius: 1em;
   padding: 0.1em 0.6em;
   font-size: 0.75em;
-  font-weight: 400;
+  font-weight: 500;
   line-height: 1.5;
   white-space: nowrap;
-  border: 1px solid var(--pico-muted-border-color, #d1d5db);
-  color: var(--pico-muted-color, #6b7280);
+  border: 1px solid var(--pico-muted-border-color, #c4c9d4);
+  color: var(--pico-muted-color, #4b5563);
   margin-right: 0.25em;
 }
 
 [data-theme="dark"] .tag-pill {
-  border-color: var(--pico-muted-border-color, #374151);
-  color: var(--pico-muted-color, #9ca3af);
+  border-color: var(--pico-muted-border-color, #4b5563);
+  color: var(--pico-muted-color, #d1d5db);
 }
 
 /* Tag multi-select dropdown widget */
@@ -261,17 +264,18 @@
 }
 
 /* Priority badges — light theme */
+/* 20% backgrounds and darkened text ensure ≥4.5:1 contrast for WCAG AA */
 .badge.priority-1 {
-  background-color: color-mix(in srgb, #ef4444 15%, transparent);
-  color: #b91c1c;
+  background-color: color-mix(in srgb, #ef4444 20%, transparent);
+  color: #991b1b;
 }
 .badge.priority-2 {
-  background-color: color-mix(in srgb, #3b82f6 15%, transparent);
-  color: #2563eb;
+  background-color: color-mix(in srgb, #3b82f6 20%, transparent);
+  color: #1d4ed8;
 }
 .badge.priority-3 {
-  background-color: color-mix(in srgb, #6b7280 15%, transparent);
-  color: #4b5563;
+  background-color: color-mix(in srgb, #6b7280 20%, transparent);
+  color: #374151;
 }
 
 /* Timestamp column: never wrap */
@@ -574,15 +578,16 @@ a.view-toggle-btn:hover {
 }
 
 /* Priority-4 badge (light theme) */
+/* Raised background to 18%, darkened text to #4b5563 for ≥4.5:1 contrast */
 .badge.priority-4 {
-  background-color: color-mix(in srgb, #6b7280 10%, transparent);
-  color: #6b7280;
+  background-color: color-mix(in srgb, #6b7280 18%, transparent);
+  color: #4b5563;
 }
 
 /* Priority-4 badge (dark theme) */
 [data-theme="dark"] .badge.priority-4 {
-  background-color: color-mix(in srgb, #6b7280 20%, transparent);
-  color: #9ca3af;
+  background-color: color-mix(in srgb, #6b7280 28%, transparent);
+  color: #d1d5db;
 }
 
 /* --- Filter multi-select widget --- */
@@ -722,17 +727,18 @@ a.view-toggle-btn:hover {
 }
 
 /* Priority badges — dark theme */
+/* Backgrounds at 28-30%, lighter text for ≥4.5:1 on dark backgrounds */
 [data-theme="dark"] .badge.priority-1 {
-  background-color: color-mix(in srgb, #ef4444 25%, transparent);
-  color: #f87171;
+  background-color: color-mix(in srgb, #ef4444 30%, transparent);
+  color: #fca5a5;
 }
 [data-theme="dark"] .badge.priority-2 {
-  background-color: color-mix(in srgb, #3b82f6 25%, transparent);
-  color: #60a5fa;
+  background-color: color-mix(in srgb, #3b82f6 30%, transparent);
+  color: #93c5fd;
 }
 [data-theme="dark"] .badge.priority-3 {
-  background-color: color-mix(in srgb, #6b7280 25%, transparent);
-  color: #9ca3af;
+  background-color: color-mix(in srgb, #6b7280 28%, transparent);
+  color: #d1d5db;
 }
 
 /* --- Inline editing --- */

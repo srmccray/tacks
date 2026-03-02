@@ -18,14 +18,16 @@
   <span class="meta-sep">·</span>
   <span class="meta-item">
     <span class="badge status-{{ task.status }}">
-      {%- if task.status == crate::models::Status::Open -%}Open
-      {%- else if task.status == crate::models::Status::InProgress -%}In Progress
-      {%- else if task.status == crate::models::Status::Done -%}Done
-      {%- else -%}Blocked{%- endif -%}
+      {%- if task.status == crate::models::Status::Open -%}○ Open
+      {%- else if task.status == crate::models::Status::InProgress -%}◐ In Progress
+      {%- else if task.status == crate::models::Status::Done -%}✓ Done
+      {%- else -%}⊘ Blocked{%- endif -%}
     </span>
   </span>
   <span class="meta-sep">·</span>
-  <span class="meta-item"><span class="badge priority-{{ task.priority }}">P{{ task.priority }}</span></span>
+  <span class="meta-item"><span class="badge priority-{{ task.priority }}">
+    {%- if task.priority == 1 -%}▲ P1{%- else if task.priority == 2 -%}▬ P2{%- else if task.priority == 3 -%}▽ P3{%- else -%}· P4{%- endif -%}
+  </span></span>
   <span class="meta-sep">·</span>
   <span class="meta-item"><span class="meta-label">Progress</span> {{ children_done }}/{{ children_total }} done</span>
   {% if let Some(assignee) = task.assignee.as_deref() %}
@@ -79,13 +81,15 @@
       <td>{{ child.title }}</td>
       <td>
         <span class="badge status-{{ child.status }}">
-          {%- if child.status == crate::models::Status::Open -%}Open
-          {%- else if child.status == crate::models::Status::InProgress -%}In Progress
-          {%- else if child.status == crate::models::Status::Done -%}Done
-          {%- else -%}Blocked{%- endif -%}
+          {%- if child.status == crate::models::Status::Open -%}○ Open
+          {%- else if child.status == crate::models::Status::InProgress -%}◐ In Progress
+          {%- else if child.status == crate::models::Status::Done -%}✓ Done
+          {%- else -%}⊘ Blocked{%- endif -%}
         </span>
       </td>
-      <td><span class="badge priority-{{ child.priority }}">P{{ child.priority }}</span></td>
+      <td><span class="badge priority-{{ child.priority }}">
+        {%- if child.priority == 1 -%}▲ P1{%- else if child.priority == 2 -%}▬ P2{%- else if child.priority == 3 -%}▽ P3{%- else -%}· P4{%- endif -%}
+      </span></td>
     </tr>
     {% endfor %}
   </tbody>
@@ -109,7 +113,9 @@
          hx-select="unset"
          hx-swap="innerHTML">{{ child.title }}</a>
       <footer class="board-card-footer">
-        <span class="badge priority-{{ child.priority }}">P{{ child.priority }}</span>
+        <span class="badge priority-{{ child.priority }}">
+          {%- if child.priority == 1 -%}▲ P1{%- else if child.priority == 2 -%}▬ P2{%- else if child.priority == 3 -%}▽ P3{%- else -%}· P4{%- endif -%}
+        </span>
       </footer>
     </article>
     {%- endif -%}
@@ -126,7 +132,9 @@
          hx-select="unset"
          hx-swap="innerHTML">{{ child.title }}</a>
       <footer class="board-card-footer">
-        <span class="badge priority-{{ child.priority }}">P{{ child.priority }}</span>
+        <span class="badge priority-{{ child.priority }}">
+          {%- if child.priority == 1 -%}▲ P1{%- else if child.priority == 2 -%}▬ P2{%- else if child.priority == 3 -%}▽ P3{%- else -%}· P4{%- endif -%}
+        </span>
       </footer>
     </article>
     {%- endif -%}
@@ -143,7 +151,9 @@
          hx-select="unset"
          hx-swap="innerHTML">{{ child.title }}</a>
       <footer class="board-card-footer">
-        <span class="badge priority-{{ child.priority }}">P{{ child.priority }}</span>
+        <span class="badge priority-{{ child.priority }}">
+          {%- if child.priority == 1 -%}▲ P1{%- else if child.priority == 2 -%}▬ P2{%- else if child.priority == 3 -%}▽ P3{%- else -%}· P4{%- endif -%}
+        </span>
       </footer>
     </article>
     {%- endif -%}
@@ -160,7 +170,9 @@
          hx-select="unset"
          hx-swap="innerHTML">{{ child.title }}</a>
       <footer class="board-card-footer">
-        <span class="badge priority-{{ child.priority }}">P{{ child.priority }}</span>
+        <span class="badge priority-{{ child.priority }}">
+          {%- if child.priority == 1 -%}▲ P1{%- else if child.priority == 2 -%}▬ P2{%- else if child.priority == 3 -%}▽ P3{%- else -%}· P4{%- endif -%}
+        </span>
       </footer>
     </article>
     {%- endif -%}

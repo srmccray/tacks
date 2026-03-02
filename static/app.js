@@ -656,13 +656,18 @@
 
   // Build a status badge HTML string for re-rendering after save
   function statusBadgeHtml(status) {
-    var label = status.replace('_', ' ');
-    return '<span class="badge status-' + status + '">' + label + '</span>';
+    var icons = { open: '○', in_progress: '◐', done: '✓', blocked: '⊘' };
+    var labels = { open: 'Open', in_progress: 'In Progress', done: 'Done', blocked: 'Blocked' };
+    var icon = icons[status] || '';
+    var label = labels[status] || status.replace('_', ' ');
+    return '<span class="badge status-' + status + '">' + icon + ' ' + label + '</span>';
   }
 
   // Build a priority badge HTML string for re-rendering after save
   function priorityBadgeHtml(priority) {
-    return '<span class="badge priority-' + priority + '">P' + priority + '</span>';
+    var icons = { 1: '▲', 2: '▬', 3: '▽', 4: '·' };
+    var icon = icons[priority] || '';
+    return '<span class="badge priority-' + priority + '">' + icon + ' P' + priority + '</span>';
   }
 
   // Build tag pill HTML for a single tag
@@ -762,13 +767,14 @@
     if (field === 'status') {
       input = document.createElement('select');
       input.className = 'inline-edit-select';
+      var statusLabels = { open: '○ Open', in_progress: '◐ In Progress', done: '✓ Done', blocked: '⊘ Blocked' };
       ['open', 'in_progress', 'done', 'blocked'].forEach(function (opt) {
         var o = document.createElement('option');
         o.value = opt;
-        o.textContent = opt.replace('_', ' ');
-        // Match against the raw status value embedded in the badge class or text
-        if (currentText.replace(/\s+/g, '_').toLowerCase() === opt ||
-            currentText.toLowerCase().replace(/\s+/g, '_') === opt) {
+        o.textContent = statusLabels[opt] || opt.replace('_', ' ');
+        // Strip leading icon character (non-ASCII) then spaces before matching
+        var normalised = currentText.replace(/^[^\w]+/, '').trim().replace(/\s+/g, '_').toLowerCase();
+        if (normalised === opt) {
           o.selected = true;
         }
         input.appendChild(o);
@@ -776,11 +782,12 @@
     } else if (field === 'priority') {
       input = document.createElement('select');
       input.className = 'inline-edit-select';
-      [1, 2, 3].forEach(function (p) {
+      var priorityLabels = { 1: '▲ P1', 2: '▬ P2', 3: '▽ P3', 4: '· P4' };
+      [1, 2, 3, 4].forEach(function (p) {
         var o = document.createElement('option');
         o.value = String(p);
-        o.textContent = 'P' + p;
-        // currentText might be "P1", "P2", or "1", "2"
+        o.textContent = priorityLabels[p] || 'P' + p;
+        // currentText might be "▲ P1", "P1", or "1" — strip non-digits
         var numText = currentText.replace(/[^0-9]/g, '');
         if (numText === String(p)) o.selected = true;
         input.appendChild(o);

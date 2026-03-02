@@ -19,10 +19,10 @@
         <span class="filter-multiselect-placeholder">All statuses</span>
       </div>
       <ul class="filter-multiselect-dropdown" role="listbox" aria-multiselectable="true" hidden>
-        <li role="option" data-value="open" data-label="Open" data-badge-class="status-open"><span class="badge status-open">Open</span></li>
-        <li role="option" data-value="in_progress" data-label="In Progress" data-badge-class="status-in_progress"><span class="badge status-in_progress">In Progress</span></li>
-        <li role="option" data-value="done" data-label="Done" data-badge-class="status-done"><span class="badge status-done">Done</span></li>
-        <li role="option" data-value="blocked" data-label="Blocked" data-badge-class="status-blocked"><span class="badge status-blocked">Blocked</span></li>
+        <li role="option" data-value="open" data-label="○ Open" data-badge-class="status-open"><span class="badge status-open">○ Open</span></li>
+        <li role="option" data-value="in_progress" data-label="◐ In Progress" data-badge-class="status-in_progress"><span class="badge status-in_progress">◐ In Progress</span></li>
+        <li role="option" data-value="done" data-label="✓ Done" data-badge-class="status-done"><span class="badge status-done">✓ Done</span></li>
+        <li role="option" data-value="blocked" data-label="⊘ Blocked" data-badge-class="status-blocked"><span class="badge status-blocked">⊘ Blocked</span></li>
       </ul>
       <input type="hidden" name="status" id="status-hidden-input" value="{{ status_filter.as_deref().unwrap_or_default() }}">
     </div>
@@ -32,10 +32,10 @@
         <span class="filter-multiselect-placeholder">All priorities</span>
       </div>
       <ul class="filter-multiselect-dropdown" role="listbox" aria-multiselectable="true" hidden>
-        <li role="option" data-value="1" data-label="P1" data-badge-class="priority-1"><span class="badge priority-1">P1</span></li>
-        <li role="option" data-value="2" data-label="P2" data-badge-class="priority-2"><span class="badge priority-2">P2</span></li>
-        <li role="option" data-value="3" data-label="P3" data-badge-class="priority-3"><span class="badge priority-3">P3</span></li>
-        <li role="option" data-value="4" data-label="P4" data-badge-class="priority-4"><span class="badge priority-4">P4</span></li>
+        <li role="option" data-value="1" data-label="▲ P1" data-badge-class="priority-1"><span class="badge priority-1">▲ P1</span></li>
+        <li role="option" data-value="2" data-label="▬ P2" data-badge-class="priority-2"><span class="badge priority-2">▬ P2</span></li>
+        <li role="option" data-value="3" data-label="▽ P3" data-badge-class="priority-3"><span class="badge priority-3">▽ P3</span></li>
+        <li role="option" data-value="4" data-label="· P4" data-badge-class="priority-4"><span class="badge priority-4">· P4</span></li>
       </ul>
       <input type="hidden" name="priority" id="priority-hidden-input" value="{{ priority_filter.as_deref().unwrap_or_default() }}">
     </div>
@@ -114,12 +114,17 @@
         {% endif %}
       </td>
       <td data-editable data-field="status" data-task-id="{{ row.task.id }}"><span class="badge status-{{ row.task.status }}">
-        {%- if row.task.status == crate::models::Status::Open -%}Open
-        {%- else if row.task.status == crate::models::Status::InProgress -%}In Progress
-        {%- else if row.task.status == crate::models::Status::Done -%}Done
-        {%- else -%}Blocked{%- endif -%}
+        {%- if row.task.status == crate::models::Status::Open -%}○ Open
+        {%- else if row.task.status == crate::models::Status::InProgress -%}◐ In Progress
+        {%- else if row.task.status == crate::models::Status::Done -%}✓ Done
+        {%- else -%}⊘ Blocked{%- endif -%}
       </span></td>
-      <td data-editable data-field="priority" data-task-id="{{ row.task.id }}"><span class="badge priority-{{ row.task.priority }}">P{{ row.task.priority }}</span></td>
+      <td data-editable data-field="priority" data-task-id="{{ row.task.id }}"><span class="badge priority-{{ row.task.priority }}">
+        {%- if row.task.priority == 1 -%}▲ P1
+        {%- else if row.task.priority == 2 -%}▬ P2
+        {%- else if row.task.priority == 3 -%}▽ P3
+        {%- else -%}· P4{%- endif -%}
+      </span></td>
       <td data-editable data-field="tags" data-task-id="{{ row.task.id }}">{% for tag in &row.task.tags %}<span class="tag-pill">{{ tag }}</span> {% endfor %}</td>
       <td class="col-updated">{{ row.task.updated_at.format("%b %d %H:%M") }}</td>
     </tr>

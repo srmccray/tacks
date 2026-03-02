@@ -10,14 +10,16 @@
   <span class="meta-sep">·</span>
   <span class="meta-item" data-editable data-field="status" data-task-id="{{ task.id }}">
     <span class="badge status-{{ task.status }}">
-      {%- if task.status == crate::models::Status::Open -%}Open
-      {%- else if task.status == crate::models::Status::InProgress -%}In Progress
-      {%- else if task.status == crate::models::Status::Done -%}Done
-      {%- else -%}Blocked{%- endif -%}
+      {%- if task.status == crate::models::Status::Open -%}○ Open
+      {%- else if task.status == crate::models::Status::InProgress -%}◐ In Progress
+      {%- else if task.status == crate::models::Status::Done -%}✓ Done
+      {%- else -%}⊘ Blocked{%- endif -%}
     </span>
   </span>
   <span class="meta-sep">·</span>
-  <span class="meta-item" data-editable data-field="priority" data-task-id="{{ task.id }}"><span class="badge priority-{{ task.priority }}">P{{ task.priority }}</span></span>
+  <span class="meta-item" data-editable data-field="priority" data-task-id="{{ task.id }}"><span class="badge priority-{{ task.priority }}">
+    {%- if task.priority == 1 -%}▲ P1{%- else if task.priority == 2 -%}▬ P2{%- else if task.priority == 3 -%}▽ P3{%- else -%}· P4{%- endif -%}
+  </span></span>
   {% if let Some(p) = parent.as_ref() %}
   <span class="meta-sep">·</span>
   <span class="meta-item"><span class="meta-label">Epic</span> <a href="/epics/{{ p.id }}" class="epic-badge">{{ p.id }}: {{ p.title }}</a></span>
