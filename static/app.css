@@ -1246,3 +1246,120 @@ a.view-toggle-btn:focus-visible {
 [data-theme="dark"] .filter-multiselect-dropdown li:focus-visible {
   outline-color: var(--pico-primary, #a78bfa);
 }
+
+/* --- Responsive Design --- */
+
+/*
+ * Tablet breakpoint: 768px and below.
+ *
+ * - Board: switch from 4-column grid to 2×2 grid.
+ * - Filter bar: allow grid cells to wrap (2 per row instead of 4+).
+ * - Table: Tags and Updated columns hidden; table gets horizontal scroll
+ *   wrapper (applied via overflow-x:auto on a parent in JS — or directly on
+ *   the table element which Pico does not constrain).
+ * - Nav: keep horizontal but compress spacing a little.
+ * - Settings dropdown: stay right-aligned (already is via `right: 0`).
+ */
+@media (max-width: 768px) {
+  /* Board: 2×2 grid instead of 4 equal columns */
+  #board-columns.grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Filter bar: 2 columns instead of 4+ */
+  form .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Task table: allow horizontal scrolling so layout does not break */
+  table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Hide lower-priority columns on tablets */
+  table thead th:nth-child(5),  /* Tags */
+  table thead th:nth-child(6),  /* Updated */
+  table tbody td:nth-child(5),  /* Tags */
+  table tbody td:nth-child(6) { /* Updated */
+    display: none;
+  }
+
+  /* Modals: limit width and add sensible padding */
+  dialog article {
+    max-width: 90vw;
+    margin: auto;
+  }
+
+  /* Reduce container padding slightly to reclaim horizontal space */
+  .container {
+    padding-left: var(--pico-spacing, 1rem);
+    padding-right: var(--pico-spacing, 1rem);
+  }
+}
+
+/*
+ * Mobile breakpoint: 480px and below.
+ *
+ * - Board: single column, vertical scroll.
+ * - Filter bar: stack all filters in a single column.
+ * - Nav: compress to allow all items to fit; "Tacks" brand is kept.
+ * - Table: only ID and Title visible; horizontal scroll for the rest.
+ * - Modal: full-width.
+ * - Toast: narrower, left-anchored so it does not clip on narrow screens.
+ */
+@media (max-width: 480px) {
+  /* Board: single-column stack */
+  #board-columns.grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Filter bar: single column, each filter full-width */
+  form .grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Also hide Status and Priority columns on mobile — keep ID + Title only */
+  table thead th:nth-child(3),  /* Status */
+  table thead th:nth-child(4),  /* Priority */
+  table tbody td:nth-child(3),  /* Status */
+  table tbody td:nth-child(4) { /* Priority */
+    display: none;
+  }
+
+  /* Modal: full viewport width, no horizontal margin */
+  dialog article {
+    max-width: 100vw;
+    margin: 0;
+    border-radius: 0;
+  }
+
+  /* Nav: reduce gap between items so everything fits in one row */
+  nav.nav-tabs ul:last-child {
+    gap: 0.25rem;
+  }
+
+  nav.nav-tabs ul:last-child li a {
+    padding: 0.5rem 0;
+    font-size: 0.875rem;
+  }
+
+  /* Toast container: anchor to bottom corners, narrower max-width */
+  #toast-container {
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: 0.75rem;
+  }
+
+  .toast {
+    max-width: 100%;
+  }
+
+  /* Settings dropdown: keep right-aligned (right:0) so it doesn't clip.
+   * No change needed since it's already `right: 0` — but cap min-width so
+   * it doesn't push off-screen on very narrow viewports. */
+  .settings-menu {
+    min-width: 8rem;
+  }
+}
