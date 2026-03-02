@@ -333,6 +333,60 @@
     }
   });
 
+  // Handle create-task-form submission via JSON POST to /api/tasks
+  document.addEventListener('submit', function (e) {
+    var form = e.target;
+    if (!form || form.id !== 'create-task-form') return;
+    e.preventDefault();
+
+    var title = form.querySelector('[name="title"]');
+    var description = form.querySelector('[name="description"]');
+    var priority = form.querySelector('[name="priority"]');
+    var status = form.querySelector('[name="status"]');
+    var tags = form.querySelector('[name="tags"]');
+    var assignee = form.querySelector('[name="assignee"]');
+    var parentId = form.querySelector('[name="parent_id"]');
+
+    // Parse tags: comma-separated string → array
+    var tagsVal = tags && tags.value.trim() ? tags.value.split(',').map(function (t) { return t.trim(); }).filter(Boolean) : null;
+
+    var body = {
+      title: title ? title.value : '',
+      description: description && description.value.trim() ? description.value.trim() : null,
+      priority: priority ? parseInt(priority.value, 10) : null,
+      status: status ? status.value : null,
+      tags: tagsVal,
+      assignee: assignee && assignee.value.trim() ? assignee.value.trim() : null,
+      parent_id: parentId && parentId.value ? parentId.value : null
+    };
+
+    var submitBtn = form.querySelector('[type="submit"]');
+    if (submitBtn) submitBtn.setAttribute('aria-busy', 'true');
+
+    fetch('/api/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    })
+      .then(function (r) {
+        if (submitBtn) submitBtn.removeAttribute('aria-busy');
+        if (r.status === 201) {
+          var dlg = document.getElementById('task-modal');
+          if (dlg) dlg.close();
+          showToast('Task created', 'success');
+          // Reload the page so the new task appears immediately.
+          // A short delay lets the toast render before navigation.
+          setTimeout(function () { window.location.reload(); }, 600);
+        } else {
+          showToast('Failed to create task', 'error');
+        }
+      })
+      .catch(function () {
+        if (submitBtn) submitBtn.removeAttribute('aria-busy');
+        showToast('Failed to create task', 'error');
+      });
+  });
+
   // --- Tag multi-select dropdown ---
 
   function initTagMultiSelect() {
@@ -1229,7 +1283,7 @@
     var path = currentPath();
 
     if (key === 'n') {
-      window.location.href = '/tasks/new';
+      htmx.ajax('GET', '/tasks/new/modal', { target: '#task-modal', swap: 'innerHTML' });
       return;
     }
 
