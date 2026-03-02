@@ -802,6 +802,8 @@ struct TaskListTemplate {
     /// All available tags for the dropdown.
     all_tags: Vec<String>,
     search_filter: Option<String>,
+    /// True when any filter (status, priority, tag, search) is active.
+    has_filters: bool,
     /// Pre-built query string for HTMX polling (preserves current filters).
     poll_query: String,
 }
@@ -929,7 +931,7 @@ pub async fn task_list(
     let has_filter = params.status.is_some()
         || params.priority.is_some()
         || params.tag.is_some()
-        || params.search.is_some();
+        || params.search.as_deref().is_some_and(|s| !s.is_empty());
     let status_values = parse_status_values(&params.status);
     let priority_values = parse_priority_values(&params.priority);
     let show_all = has_filter || params.all.unwrap_or(false);
@@ -1022,6 +1024,7 @@ pub async fn task_list(
         selected_tags,
         all_tags,
         search_filter: params.search,
+        has_filters: has_filter,
         poll_query,
     })
 }

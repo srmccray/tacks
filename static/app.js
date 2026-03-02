@@ -259,7 +259,15 @@
         return;
       }
     }
-    // Only guard tbody polling swaps, not full content-area navigations
+    // Guard content-area polling swaps (epics list, epic detail) when inline editing
+    if (e.detail.target && e.detail.target.id === 'content-area') {
+      var editing = document.querySelector('[data-editable].editing');
+      if (editing) {
+        e.detail.shouldSwap = false;
+        return;
+      }
+    }
+    // Guard tbody polling swaps (task list) when inline editing
     if (e.detail.target && e.detail.target.tagName === 'TBODY') {
       var editing = document.querySelector('[data-editable].editing');
       if (editing) {

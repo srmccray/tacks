@@ -19,6 +19,11 @@
     </tr>
   </thead>
   <tbody>
+    {% if epics.is_empty() %}
+    <tr>
+      <td colspan="4" style="text-align:center;color:var(--pico-muted-color);padding:2rem 0">No epics yet</td>
+    </tr>
+    {% else %}
     {% for ep in epics %}
     <tr>
       <td><a href="/epics/{{ ep.task.id }}">{{ ep.task.id }}</a></td>
@@ -32,6 +37,7 @@
       <td>{{ ep.children_done }}/{{ ep.children_total }}</td>
     </tr>
     {% endfor %}
+    {% endif %}
   </tbody>
 </table>
 </div>

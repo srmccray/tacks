@@ -89,6 +89,17 @@
          hx-trigger="every 2s [document.visibilityState === 'visible']"
          hx-select="tbody"
          hx-swap="outerHTML">
+    {% if tasks.is_empty() %}
+    <tr>
+      <td colspan="6" style="text-align:center;color:var(--pico-muted-color);padding:2rem 0">
+        {%- if has_filters -%}
+        No tasks match your filters
+        {%- else -%}
+        No tasks yet — create one to get started
+        {%- endif -%}
+      </td>
+    </tr>
+    {% else %}
     {% for row in tasks %}
     <tr tabindex="-1" data-href="/tasks/{{ row.task.id }}">
       <td><a href="/tasks/{{ row.task.id }}"
@@ -113,6 +124,7 @@
       <td class="col-updated">{{ row.task.updated_at.format("%b %d %H:%M") }}</td>
     </tr>
     {% endfor %}
+    {% endif %}
   </tbody>
 </table>
 </div>

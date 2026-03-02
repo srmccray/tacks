@@ -95,5 +95,8 @@
     {% endfor %}
   </div>
 </div>
+{% if open_tasks.is_empty() && in_progress_tasks.is_empty() && blocked_tasks.is_empty() && done_tasks.is_empty() %}
+<p style="text-align:center;color:var(--pico-muted-color);padding:2rem 0">No tasks match your filters</p>
+{% endif %}
 </div>
 {% endblock %}
