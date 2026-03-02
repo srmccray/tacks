@@ -26,22 +26,35 @@
       <option value="2" {% if priority_filter.as_deref() == Some("2") %}selected{% endif %}>P2</option>
       <option value="3" {% if priority_filter.as_deref() == Some("3") %}selected{% endif %}>P3</option>
     </select>
-    <div class="tag-autocomplete">
-      {% if tag_filter.is_some() %}
-      <span class="filter-tag-pill" id="active-tag-pill">
-        <span class="filter-tag-pill-text">{{ tag_filter.as_deref().unwrap_or_default() }}</span>
-        <button class="filter-tag-pill-remove" type="button" aria-label="Remove tag filter">&times;</button>
-      </span>
-      {% else %}
-      <span class="filter-tag-pill" id="active-tag-pill" style="display:none">
-        <span class="filter-tag-pill-text"></span>
-        <button class="filter-tag-pill-remove" type="button" aria-label="Remove tag filter">&times;</button>
-      </span>
-      {% endif %}
-      <input type="text" class="tag-text-input" placeholder="Filter by tag" autocomplete="off"
-             {% if tag_filter.is_some() %}style="display:none"{% endif %}>
+    <div class="tag-multiselect" id="tag-multiselect">
+      <div class="tag-multiselect-trigger" id="tag-multiselect-trigger" role="button" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
+        <span class="tag-multiselect-pills" id="tag-multiselect-pills">
+          {% for tag in &selected_tags %}
+          <span class="filter-tag-pill" data-tag="{{ tag }}">
+            <span class="filter-tag-pill-text">{{ tag }}</span>
+            <button class="filter-tag-pill-remove" type="button" aria-label="Remove {{ tag }} filter" data-remove-tag="{{ tag }}">&times;</button>
+          </span>
+          {% endfor %}
+        </span>
+        <span class="tag-multiselect-placeholder" id="tag-multiselect-placeholder"{% if !selected_tags.is_empty() %} style="display:none"{% endif %}>Filter by tag</span>
+        <span class="tag-multiselect-caret">&#9660;</span>
+      </div>
+      <ul class="tag-multiselect-dropdown" id="tag-multiselect-dropdown" hidden role="listbox" aria-multiselectable="true">
+        {% if all_tags.is_empty() %}
+        <li class="tag-dropdown-empty">No tags</li>
+        {% else %}
+        {% for tag in &all_tags %}
+        <li class="tag-dropdown-option {% if selected_tags.contains(tag) %}selected{% endif %}"
+            role="option"
+            aria-selected="{% if selected_tags.contains(tag) %}true{% else %}false{% endif %}"
+            data-tag="{{ tag }}">
+          <span class="tag-pill">{{ tag }}</span>
+          {% if selected_tags.contains(tag) %}<span class="tag-check">&#10003;</span>{% endif %}
+        </li>
+        {% endfor %}
+        {% endif %}
+      </ul>
       <input type="hidden" name="tag" value="{{ tag_filter.as_deref().unwrap_or_default() }}" id="tag-hidden-input">
-      <ul class="tag-suggestions" id="tag-suggestions"></ul>
     </div>
     <input type="text" name="search" placeholder="Search titles..." value="{{ search_filter.as_deref().unwrap_or_default() }}">
     <noscript><button type="submit">Filter</button></noscript>

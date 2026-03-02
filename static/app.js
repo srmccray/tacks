@@ -284,178 +284,166 @@
     }
   });
 
-  // --- Tag autocomplete ---
+  // --- Tag multi-select dropdown ---
 
-  // Cached tag list — fetched once, reused across re-inits (survives HTMX swaps)
-  var cachedTags = null;
-
-  function fetchTags(cb) {
-    if (cachedTags !== null) {
-      cb(cachedTags);
-      return;
-    }
-    fetch('/api/tags')
-      .then(function (r) { return r.json(); })
-      .then(function (tags) {
-        cachedTags = tags;
-        cb(tags);
-      })
-      .catch(function () { cb([]); });
-  }
-
-  function initTagAutocomplete() {
-    var wrapper = document.querySelector('.tag-autocomplete');
+  function initTagMultiSelect() {
+    var wrapper = document.getElementById('tag-multiselect');
     if (!wrapper) return;
 
-    var textInput = wrapper.querySelector('.tag-text-input');
-    var hiddenInput = wrapper.querySelector('input[name="tag"]');
-    var pill = wrapper.querySelector('.filter-tag-pill');
-    var pillText = wrapper.querySelector('.filter-tag-pill-text');
-    var pillRemove = wrapper.querySelector('.filter-tag-pill-remove');
-    var suggList = wrapper.querySelector('.tag-suggestions');
+    var trigger = document.getElementById('tag-multiselect-trigger');
+    var dropdown = document.getElementById('tag-multiselect-dropdown');
+    var pillsContainer = document.getElementById('tag-multiselect-pills');
+    var placeholder = document.getElementById('tag-multiselect-placeholder');
+    var hiddenInput = document.getElementById('tag-hidden-input');
 
-    if (!textInput || !hiddenInput || !pill || !suggList) return;
+    if (!trigger || !dropdown || !hiddenInput) return;
 
-    var activeIdx = -1;
-
-    function getSuggestions() {
-      return Array.from(suggList.querySelectorAll('li'));
+    // Collect currently selected tags from hidden input
+    function getSelectedTags() {
+      var val = hiddenInput.value;
+      if (!val) return [];
+      return val.split(',').map(function (t) { return t.trim(); }).filter(Boolean);
     }
 
-    function closeSuggestions() {
-      suggList.setAttribute('hidden', '');
-      suggList.innerHTML = '';
-      activeIdx = -1;
+    // Update the hidden input and fire change to trigger HTMX
+    function setSelectedTags(tags) {
+      hiddenInput.value = tags.join(',');
+      hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
-    function showSuggestions(matches) {
-      suggList.innerHTML = '';
-      activeIdx = -1;
-      if (matches.length === 0) {
-        closeSuggestions();
-        return;
-      }
-      matches.forEach(function (tag) {
-        var li = document.createElement('li');
-        li.textContent = tag;
-        li.addEventListener('mousedown', function (e) {
-          // mousedown fires before blur; prevent blur from closing the list
-          e.preventDefault();
-          selectTag(tag);
-        });
-        suggList.appendChild(li);
+    // Rebuild the pills display in the trigger area
+    function renderPills(tags) {
+      // Remove existing dynamic pills (keep static server-rendered ones cleared first)
+      Array.from(pillsContainer.querySelectorAll('.filter-tag-pill')).forEach(function (p) {
+        p.remove();
       });
-      suggList.removeAttribute('hidden');
+      tags.forEach(function (tag) {
+        var pill = document.createElement('span');
+        pill.className = 'filter-tag-pill';
+        pill.setAttribute('data-tag', tag);
+        pill.innerHTML =
+          '<span class="filter-tag-pill-text">' + escapeHtml(tag) + '</span>' +
+          '<button class="filter-tag-pill-remove" type="button" aria-label="Remove ' + escapeHtml(tag) + ' filter" data-remove-tag="' + escapeHtml(tag) + '">&times;</button>';
+        pillsContainer.appendChild(pill);
+      });
+      // Show/hide placeholder
+      if (placeholder) {
+        placeholder.style.display = tags.length > 0 ? 'none' : '';
+      }
     }
 
-    function highlightActive(items) {
-      items.forEach(function (li, i) {
-        if (i === activeIdx) {
-          li.classList.add('active');
+    // Update the checkmarks and selected class in the dropdown options
+    function syncDropdownOptions(tags) {
+      Array.from(dropdown.querySelectorAll('.tag-dropdown-option')).forEach(function (li) {
+        var tag = li.getAttribute('data-tag');
+        var isSelected = tags.indexOf(tag) !== -1;
+        li.classList.toggle('selected', isSelected);
+        li.setAttribute('aria-selected', isSelected ? 'true' : 'false');
+        // Update or add checkmark
+        var check = li.querySelector('.tag-check');
+        if (isSelected) {
+          if (!check) {
+            check = document.createElement('span');
+            check.className = 'tag-check';
+            check.textContent = '\u2713';
+            li.appendChild(check);
+          }
         } else {
-          li.classList.remove('active');
+          if (check) check.remove();
         }
       });
     }
 
-    function selectTag(tag) {
-      // Show the pill
-      if (pillText) pillText.textContent = tag;
-      pill.style.display = '';
-      // Hide the text input
-      textInput.style.display = 'none';
-      textInput.value = '';
-      // Set hidden input and fire change to trigger HTMX
-      hiddenInput.value = tag;
-      hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
-      closeSuggestions();
+    function escapeHtml(str) {
+      var d = document.createElement('div');
+      d.textContent = str;
+      return d.innerHTML;
     }
 
-    function clearTag() {
-      pill.style.display = 'none';
-      if (pillText) pillText.textContent = '';
-      textInput.style.display = '';
-      textInput.value = '';
-      hiddenInput.value = '';
-      hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
-      closeSuggestions();
+    function openDropdown() {
+      dropdown.removeAttribute('hidden');
+      trigger.setAttribute('aria-expanded', 'true');
     }
 
-    // Clicking the wrapper focuses the text input
-    wrapper.addEventListener('click', function (e) {
-      if (!e.target.closest('.filter-tag-pill')) {
-        textInput.focus();
+    function closeDropdown() {
+      dropdown.setAttribute('hidden', '');
+      trigger.setAttribute('aria-expanded', 'false');
+    }
+
+    function toggleTag(tag) {
+      var tags = getSelectedTags();
+      var idx = tags.indexOf(tag);
+      if (idx === -1) {
+        tags.push(tag);
+      } else {
+        tags.splice(idx, 1);
+      }
+      setSelectedTags(tags);
+      renderPills(tags);
+      syncDropdownOptions(tags);
+    }
+
+    // Toggle dropdown open/close on trigger click
+    trigger.addEventListener('click', function (e) {
+      // Don't open if clicking a remove-pill button
+      if (e.target.closest('.filter-tag-pill-remove')) return;
+      if (dropdown.hasAttribute('hidden')) {
+        openDropdown();
+      } else {
+        closeDropdown();
       }
     });
 
-    // Remove pill button
-    pillRemove.addEventListener('click', function (e) {
-      e.preventDefault();
-      clearTag();
-      textInput.focus();
-    });
-
-    // Text input: filter suggestions on input
-    textInput.addEventListener('input', function () {
-      var query = textInput.value.trim().toLowerCase();
-      if (query.length === 0) {
-        closeSuggestions();
-        return;
-      }
-      fetchTags(function (tags) {
-        var matches = tags.filter(function (t) {
-          return t.toLowerCase().includes(query);
-        });
-        showSuggestions(matches);
-      });
-    });
-
-    // Pre-fetch on focus so suggestions are ready
-    textInput.addEventListener('focus', function () {
-      fetchTags(function () {}); // warm the cache silently
-    });
-
-    // Keyboard navigation in the suggestions list
-    textInput.addEventListener('keydown', function (e) {
-      var items = getSuggestions();
-      if (e.key === 'ArrowDown') {
+    // Keyboard: open dropdown on Enter/Space/ArrowDown while trigger focused
+    trigger.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
         e.preventDefault();
-        if (items.length === 0 && textInput.value.trim()) {
-          // Try to show suggestions if not visible
-          fetchTags(function (tags) {
-            var q = textInput.value.trim().toLowerCase();
-            showSuggestions(tags.filter(function (t) { return t.toLowerCase().includes(q); }));
-          });
-          return;
-        }
-        activeIdx = Math.min(activeIdx + 1, items.length - 1);
-        highlightActive(items);
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        activeIdx = Math.max(activeIdx - 1, -1);
-        highlightActive(items);
-      } else if (e.key === 'Tab' || e.key === 'Enter') {
-        if (items.length > 0) {
-          e.preventDefault();
-          var chosen = activeIdx >= 0 ? items[activeIdx] : items[0];
-          selectTag(chosen.textContent);
+        if (dropdown.hasAttribute('hidden')) {
+          openDropdown();
         }
       } else if (e.key === 'Escape') {
-        closeSuggestions();
-        textInput.blur();
+        closeDropdown();
+        trigger.focus();
       }
     });
 
-    // Close suggestions when clicking outside
+    // Click on dropdown option toggles that tag
+    dropdown.addEventListener('mousedown', function (e) {
+      // mousedown fires before blur on trigger; prevent blur from closing dropdown
+      e.preventDefault();
+    });
+
+    dropdown.addEventListener('click', function (e) {
+      var option = e.target.closest('.tag-dropdown-option');
+      if (!option) return;
+      var tag = option.getAttribute('data-tag');
+      if (tag) toggleTag(tag);
+    });
+
+    // Click on remove button inside a pill (event bubbles from pillsContainer)
+    wrapper.addEventListener('click', function (e) {
+      var btn = e.target.closest('.filter-tag-pill-remove');
+      if (!btn) return;
+      e.stopPropagation();
+      var tag = btn.getAttribute('data-remove-tag');
+      if (tag) toggleTag(tag);
+    });
+
+    // Close dropdown when clicking outside
     document.addEventListener('click', function (e) {
       if (!wrapper.contains(e.target)) {
-        closeSuggestions();
+        closeDropdown();
       }
     });
+
+    // On init: sync state from hidden input (handles server-rendered selections)
+    var initialTags = getSelectedTags();
+    renderPills(initialTags);
+    syncDropdownOptions(initialTags);
   }
 
   // Initialize on DOMContentLoaded and after HTMX settles (full content swaps)
-  document.addEventListener('DOMContentLoaded', initTagAutocomplete);
+  document.addEventListener('DOMContentLoaded', initTagMultiSelect);
   document.addEventListener('htmx:afterSettle', function (e) {
     // Re-init only when the content-area or a parent was swapped (not tbody polling)
     var target = e.detail.target;
@@ -463,9 +451,9 @@
       target &&
       (target.id === 'content-area' ||
         target.id === 'main' ||
-        target.querySelector && target.querySelector('.tag-autocomplete'))
+        (target.querySelector && target.querySelector('#tag-multiselect')))
     ) {
-      initTagAutocomplete();
+      initTagMultiSelect();
     }
   });
 
@@ -953,11 +941,11 @@
 
     if (key === '/') {
       e.preventDefault();
-      // Focus the visible tag text input (autocomplete); fall back to hidden input name="tag"
-      var tagInput = document.querySelector('.tag-text-input') || document.querySelector('input[name="tag"]');
-      if (tagInput) {
-        tagInput.style.display = '';
-        tagInput.focus();
+      // Open the tag multi-select dropdown; fall back to focusing the trigger
+      var trigger = document.getElementById('tag-multiselect-trigger');
+      if (trigger) {
+        trigger.focus();
+        trigger.click();
       }
       return;
     }

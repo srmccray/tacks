@@ -209,6 +209,29 @@ pub async fn api_create_task(
     Ok((StatusCode::CREATED, Json(result)))
 }
 
+/// Parse a comma-separated tag query param into a list of trimmed, non-empty tags.
+fn parse_tags(tag_param: Option<&str>) -> Vec<String> {
+    match tag_param {
+        None => vec![],
+        Some(s) => s
+            .split(',')
+            .map(|t| t.trim().to_string())
+            .filter(|t| !t.is_empty())
+            .collect(),
+    }
+}
+
+/// Filter a task list to only tasks that have at least one of the given tags (OR semantics).
+fn filter_by_tags(tasks: Vec<Task>, tags: &[String]) -> Vec<Task> {
+    if tags.is_empty() {
+        return tasks;
+    }
+    tasks
+        .into_iter()
+        .filter(|t| tags.iter().any(|tag| t.tags.contains(tag)))
+        .collect()
+}
+
 /// GET /api/tasks — List tasks with optional filters (200).
 pub async fn api_list_tasks(
     State(state): State<AppState>,
@@ -217,21 +240,33 @@ pub async fn api_list_tasks(
     let show_all = query.all.unwrap_or(false);
     let status_filter = query.status.clone();
     let priority_filter = query.priority;
-    let tag_filter = query.tag.clone();
+    let tag_param = query.tag.clone();
     let parent_filter = query.parent.clone();
     let search_filter = query.search.clone();
+
+    // Parse comma-separated tags for multi-tag OR filtering
+    let tags = parse_tags(tag_param.as_deref());
+    // For DB query: use a single tag when exactly one is selected (uses indexed LIKE);
+    // when multiple tags, skip DB tag filter and post-filter in Rust.
+    let db_tag_filter = if tags.len() == 1 {
+        tags.first().cloned()
+    } else {
+        None
+    };
+    let multi_tags = if tags.len() > 1 { tags } else { vec![] };
 
     let db = state.db.clone();
     let tasks = tokio::task::spawn_blocking(move || {
         let db = db.lock().unwrap();
-        db.list_tasks(
+        let tasks = db.list_tasks(
             show_all,
             status_filter.as_deref(),
             priority_filter,
-            tag_filter.as_deref(),
+            db_tag_filter.as_deref(),
             parent_filter.as_deref(),
             search_filter.as_deref(),
-        )
+        )?;
+        Ok(filter_by_tags(tasks, &multi_tags))
     })
     .await
     .map_err(|e| AppError::Internal(e.to_string()))?
@@ -704,7 +739,12 @@ struct TaskListTemplate {
     tasks: Vec<TaskRow>,
     status_filter: Option<String>,
     priority_filter: Option<String>,
+    /// Comma-separated tag filter string (may contain multiple tags).
     tag_filter: Option<String>,
+    /// Parsed list of selected tags (for rendering pills).
+    selected_tags: Vec<String>,
+    /// All available tags for the dropdown.
+    all_tags: Vec<String>,
     search_filter: Option<String>,
     /// Pre-built query string for HTMX polling (preserves current filters).
     poll_query: String,
@@ -837,32 +877,54 @@ pub async fn task_list(
     let show_all = has_filter || params.all.unwrap_or(false);
     let status_filter = params.status.clone();
     let priority_filter = params.priority;
-    let tag_filter = params.tag.clone();
+    let tag_param = params.tag.clone();
     let search_filter = params.search.clone();
 
+    // Parse comma-separated tags for multi-tag OR filtering
+    let selected_tags = parse_tags(tag_param.as_deref());
+    let db_tag_filter = if selected_tags.len() == 1 {
+        selected_tags.first().cloned()
+    } else {
+        None
+    };
+    let multi_tags = if selected_tags.len() > 1 {
+        selected_tags.clone()
+    } else {
+        vec![]
+    };
+
     let db = state.db.clone();
-    let task_rows = tokio::task::spawn_blocking(move || -> Result<Vec<TaskRow>, String> {
-        let db = db.lock().unwrap();
-        let tasks = db.list_tasks(
-            show_all,
-            status_filter.as_deref(),
-            priority_filter,
-            tag_filter.as_deref(),
-            None,
-            search_filter.as_deref(),
-        )?;
-        // Batch-load parent epics (avoids N+1: one lookup per unique parent_id)
-        let parent_ids: std::collections::HashSet<String> =
-            tasks.iter().filter_map(|t| t.parent_id.clone()).collect();
-        let parents = fetch_parent_map(&db, parent_ids.into_iter())?;
-        Ok(tasks
-            .into_iter()
-            .map(|t| TaskRow::from_task(t, &parents))
-            .collect())
-    })
-    .await
-    .unwrap()
-    .unwrap_or_default();
+    let (task_rows, all_tags) =
+        tokio::task::spawn_blocking(move || -> Result<(Vec<TaskRow>, Vec<String>), String> {
+            let db = db.lock().unwrap();
+            let tasks = db.list_tasks(
+                show_all,
+                status_filter.as_deref(),
+                priority_filter,
+                db_tag_filter.as_deref(),
+                None,
+                search_filter.as_deref(),
+            )?;
+            let tasks = filter_by_tags(tasks, &multi_tags);
+            // Batch-load parent epics (avoids N+1: one lookup per unique parent_id)
+            let parent_ids: std::collections::HashSet<String> =
+                tasks.iter().filter_map(|t| t.parent_id.clone()).collect();
+            let parents = fetch_parent_map(&db, parent_ids.into_iter())?;
+            let rows: Vec<TaskRow> = tasks
+                .into_iter()
+                .map(|t| TaskRow::from_task(t, &parents))
+                .collect();
+            // Fetch all tags for the dropdown
+            let all_tags: Vec<String> = db
+                .task_count_by_tag()?
+                .into_iter()
+                .map(|(tag, _count)| tag)
+                .collect();
+            Ok((rows, all_tags))
+        })
+        .await
+        .unwrap()
+        .unwrap_or_else(|_| (vec![], vec![]));
 
     let poll_query = build_poll_query(&params.status, params.priority, &params.tag, &params.search);
 
@@ -871,6 +933,8 @@ pub async fn task_list(
         status_filter: params.status,
         priority_filter: params.priority.map(|p| p.to_string()),
         tag_filter: params.tag,
+        selected_tags,
+        all_tags,
         search_filter: params.search,
         poll_query,
     })
