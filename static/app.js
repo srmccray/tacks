@@ -281,6 +281,61 @@
 
   // --- Task modal ---
 
+  // --- Modal focus trap (inert approach) ---
+  // When any <dialog> opens via showModal(), set `inert` on the #main content wrapper
+  // so background elements cannot receive keyboard focus or interaction.
+  // Remove `inert` when the dialog closes.
+
+  function setMainInert(inert) {
+    var main = document.getElementById('main');
+    if (!main) return;
+    if (inert) {
+      main.setAttribute('inert', '');
+    } else {
+      main.removeAttribute('inert');
+    }
+  }
+
+  // Observe all <dialog> elements for open/close state changes.
+  // We use a MutationObserver on <body> to catch dynamically-created dialogs too.
+  function handleDialogToggle() {
+    var anyOpen = Array.from(document.querySelectorAll('dialog')).some(function (d) {
+      return d.open;
+    });
+    setMainInert(anyOpen);
+  }
+
+  // Watch the <dialog> elements' attributes for the `open` attribute changing
+  var dialogObserver = new MutationObserver(function (mutations) {
+    mutations.forEach(function (m) {
+      if (m.attributeName === 'open') {
+        handleDialogToggle();
+      }
+    });
+  });
+
+  function observeDialogs() {
+    document.querySelectorAll('dialog').forEach(function (dlg) {
+      dialogObserver.observe(dlg, { attributes: true, attributeFilter: ['open'] });
+    });
+  }
+
+  // Also observe <body> for new <dialog> elements being added
+  var bodyObserver = new MutationObserver(function (mutations) {
+    mutations.forEach(function (m) {
+      m.addedNodes.forEach(function (node) {
+        if (node.nodeType === 1 && node.tagName === 'DIALOG') {
+          dialogObserver.observe(node, { attributes: true, attributeFilter: ['open'] });
+        }
+      });
+    });
+  });
+
+  document.addEventListener('DOMContentLoaded', function () {
+    observeDialogs();
+    bodyObserver.observe(document.body, { childList: true });
+  });
+
   // Open the modal after HTMX swaps content into it
   document.addEventListener('htmx:afterSwap', function (e) {
     if (e.detail.target.id === 'task-modal') {
@@ -463,14 +518,37 @@
       return d.innerHTML;
     }
 
+    function getTagOptions() {
+      return Array.from(dropdown.querySelectorAll('.tag-dropdown-option'));
+    }
+
+    function getFocusedTagOptionIndex() {
+      var options = getTagOptions();
+      return options.indexOf(document.activeElement);
+    }
+
+    function focusTagOption(index) {
+      var options = getTagOptions();
+      if (options.length === 0) return;
+      var clamped = Math.max(0, Math.min(index, options.length - 1));
+      options[clamped].focus();
+    }
+
     function openDropdown() {
       dropdown.removeAttribute('hidden');
       trigger.setAttribute('aria-expanded', 'true');
+      // Make options keyboard-focusable
+      getTagOptions().forEach(function (li) { li.setAttribute('tabindex', '-1'); });
     }
 
     function closeDropdown() {
       dropdown.setAttribute('hidden', '');
       trigger.setAttribute('aria-expanded', 'false');
+    }
+
+    function closeDropdownAndFocusTrigger() {
+      closeDropdown();
+      trigger.focus();
     }
 
     function toggleTag(tag) {
@@ -497,16 +575,24 @@
       }
     });
 
-    // Keyboard: open dropdown on Enter/Space/ArrowDown while trigger focused
+    // Keyboard: full navigation while trigger is focused
     trigger.addEventListener('keydown', function (e) {
       if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
         e.preventDefault();
         if (dropdown.hasAttribute('hidden')) {
           openDropdown();
         }
+        focusTagOption(0);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (dropdown.hasAttribute('hidden')) {
+          openDropdown();
+        }
+        focusTagOption(getTagOptions().length - 1);
       } else if (e.key === 'Escape') {
+        closeDropdownAndFocusTrigger();
+      } else if (e.key === 'Tab') {
         closeDropdown();
-        trigger.focus();
       }
     });
 
@@ -521,6 +607,34 @@
       if (!option) return;
       var tag = option.getAttribute('data-tag');
       if (tag) toggleTag(tag);
+    });
+
+    // Keyboard navigation within tag dropdown options
+    dropdown.addEventListener('keydown', function (e) {
+      var idx = getFocusedTagOptionIndex();
+      var options = getTagOptions();
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        focusTagOption(idx + 1);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (idx <= 0) {
+          closeDropdownAndFocusTrigger();
+        } else {
+          focusTagOption(idx - 1);
+        }
+      } else if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        if (idx !== -1) {
+          var tag = options[idx].getAttribute('data-tag');
+          if (tag) toggleTag(tag);
+        }
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        closeDropdownAndFocusTrigger();
+      } else if (e.key === 'Tab') {
+        closeDropdown();
+      }
     });
 
     // Click on remove button inside a pill (event bubbles from pillsContainer)
@@ -662,6 +776,8 @@
     function openDropdown() {
       dropdown.removeAttribute('hidden');
       trigger.setAttribute('aria-expanded', 'true');
+      // Set tabindex on items so they are keyboard-focusable
+      items.forEach(function (li) { li.setAttribute('tabindex', '-1'); });
     }
 
     function closeDropdown() {
@@ -669,8 +785,24 @@
       trigger.setAttribute('aria-expanded', 'false');
     }
 
+    function closeDropdownAndFocusTrigger() {
+      closeDropdown();
+      trigger.focus();
+    }
+
     function isOpen() {
       return !dropdown.hasAttribute('hidden');
+    }
+
+    // Focus a specific option item (by index among visible items)
+    function focusItem(index) {
+      if (items.length === 0) return;
+      var clamped = Math.max(0, Math.min(index, items.length - 1));
+      items[clamped].focus();
+    }
+
+    function getFocusedItemIndex() {
+      return items.indexOf(document.activeElement);
     }
 
     // Trigger click: toggle dropdown
@@ -683,16 +815,24 @@
       }
     });
 
-    // Keyboard: Enter/Space on trigger opens dropdown
+    // Keyboard: Enter/Space/ArrowDown on trigger opens dropdown and focuses first item
     trigger.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter' || e.key === ' ') {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
         e.preventDefault();
-        if (isOpen()) {
-          closeDropdown();
-        } else {
+        if (!isOpen()) {
           openDropdown();
         }
+        focusItem(0);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (!isOpen()) {
+          openDropdown();
+        }
+        focusItem(items.length - 1);
       } else if (e.key === 'Escape') {
+        closeDropdownAndFocusTrigger();
+      } else if (e.key === 'Tab') {
+        // Tab closes dropdown without returning focus so natural tab order proceeds
         closeDropdown();
       }
     });
@@ -703,10 +843,39 @@
     });
 
     items.forEach(function (li) {
+      li.setAttribute('role', 'option');
+
       li.addEventListener('click', function (e) {
         e.stopPropagation();
         var value = li.getAttribute('data-value');
         if (value) toggleValue(value);
+      });
+
+      // Keyboard navigation within dropdown options
+      li.addEventListener('keydown', function (e) {
+        var idx = getFocusedItemIndex();
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          focusItem(idx + 1);
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          if (idx <= 0) {
+            // Wrap back to trigger when arrowing up past first item
+            closeDropdownAndFocusTrigger();
+          } else {
+            focusItem(idx - 1);
+          }
+        } else if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          var value = li.getAttribute('data-value');
+          if (value) toggleValue(value);
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          closeDropdownAndFocusTrigger();
+        } else if (e.key === 'Tab') {
+          // Tab closes and lets focus move naturally
+          closeDropdown();
+        }
       });
     });
 
@@ -1334,18 +1503,27 @@
     }
 
     // Board navigation
-    if (path === '/board') {
+    if (path === '/board' || path.startsWith('/board?')) {
       var cards = getBoardCards();
       if (key === 'ArrowDown' || key === 'ArrowRight') {
-        e.preventDefault();
-        var ci = getFocusedCardIndex(cards);
-        focusCard(cards, ci === -1 ? 0 : ci + 1);
+        // Shift+Right is reserved for keyboard DnD (move card to next column)
+        if (e.shiftKey) {
+          // handled below in the board-card keydown section
+        } else {
+          e.preventDefault();
+          var ci = getFocusedCardIndex(cards);
+          focusCard(cards, ci === -1 ? 0 : ci + 1);
+        }
         return;
       }
       if (key === 'ArrowUp' || key === 'ArrowLeft') {
-        e.preventDefault();
-        var ci2 = getFocusedCardIndex(cards);
-        focusCard(cards, ci2 === -1 ? 0 : ci2 - 1);
+        if (e.shiftKey) {
+          // handled below in the board-card keydown section
+        } else {
+          e.preventDefault();
+          var ci2 = getFocusedCardIndex(cards);
+          focusCard(cards, ci2 === -1 ? 0 : ci2 - 1);
+        }
         return;
       }
       if (key === 'Enter') {
@@ -1354,5 +1532,70 @@
         return;
       }
     }
+  });
+
+  // --- Board keyboard drag-and-drop (Shift+Arrow) ---
+  // When a .board-card has focus, Shift+Left/Right moves it to the adjacent status column.
+  // Column order for keyboard moves: open → in_progress → done (skip blocked — set by deps).
+
+  var KEYBOARD_DND_COLUMN_ORDER = ['open', 'in_progress', 'done'];
+
+  document.addEventListener('keydown', function (e) {
+    if (!e.shiftKey) return;
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+
+    // Only act when a .board-card (the article element) has focus
+    var card = document.activeElement;
+    if (!card || !card.classList.contains('board-card')) return;
+
+    e.preventDefault();
+
+    var column = card.closest('.board-column');
+    if (!column) return;
+
+    var currentStatus = column.getAttribute('data-status');
+    var currentIdx = KEYBOARD_DND_COLUMN_ORDER.indexOf(currentStatus);
+    if (currentIdx === -1) return; // card is in 'blocked' — not moveable via keyboard
+
+    var direction = e.key === 'ArrowRight' ? 1 : -1;
+    var targetIdx = currentIdx + direction;
+    if (targetIdx < 0 || targetIdx >= KEYBOARD_DND_COLUMN_ORDER.length) return;
+
+    var targetStatus = KEYBOARD_DND_COLUMN_ORDER[targetIdx];
+    var taskId = card.getAttribute('data-task-id');
+    if (!taskId) return;
+
+    // Find target column element
+    var targetColumn = document.querySelector('.board-column[data-status="' + targetStatus + '"]');
+    if (!targetColumn) return;
+
+    // Optimistic UI: move card to target column immediately
+    targetColumn.appendChild(card);
+    card.focus(); // keep focus on the moved card
+
+    // Show pending indicator
+    card.classList.add('drag-pending');
+
+    // PATCH the API
+    fetch('/api/tasks/' + taskId, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: targetStatus }),
+    })
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        card.classList.remove('drag-pending');
+        var statusLabels = { open: 'Open', in_progress: 'In Progress', done: 'Done' };
+        showToast('Moved to ' + (statusLabels[targetStatus] || targetStatus), 'success', 2500);
+      })
+      .catch(function () {
+        card.classList.remove('drag-pending');
+        // Revert: move back to original column
+        column.appendChild(card);
+        card.focus();
+        card.classList.add('drag-error');
+        setTimeout(function () { card.classList.remove('drag-error'); }, 700);
+        showToast('Failed to move task — status not updated', 'error');
+      });
   });
 })();
