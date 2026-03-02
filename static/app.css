@@ -241,7 +241,7 @@
 /* Board card header: title link + priority pill on one line */
 .board-card-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.4rem;
 }
 
@@ -663,7 +663,6 @@ a.view-toggle-btn:hover {
   padding-right: 2.5rem;
   margin-bottom: 0;
 }
-
 /* --- Board drag-and-drop --- */
 
 /* Card being dragged: reduce opacity so origin is visible */
@@ -672,6 +671,11 @@ a.view-toggle-btn:hover {
   cursor: grabbing;
 }
 
+/* Board column heading: space below so drag-over highlight starts clear of the title */
+.board-column h2,
+.board-column h3 {
+  margin-bottom: 0.75rem;
+}
 /* Column receiving a drag: highlight as valid drop target */
 .board-column.drag-over {
   background-color: color-mix(in srgb, var(--pico-primary, #7c3aed) 8%, transparent);
