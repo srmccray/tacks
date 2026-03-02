@@ -1156,6 +1156,13 @@ td a:focus-visible,
   border-radius: var(--pico-border-radius, 0.25rem);
 }
 
+/* Suppress ALL outlines on the wrapper while editing — focus belongs to the input */
+[data-editable].editing,
+[data-editable].editing:focus,
+[data-editable].editing:focus-visible {
+  outline: none !important;
+}
+
 [data-theme="dark"] [data-editable]:not(.editing):focus-visible {
   outline-color: var(--pico-primary, #a78bfa);
 }
