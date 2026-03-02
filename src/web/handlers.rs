@@ -143,10 +143,17 @@ pub async fn api_create_task(
     State(state): State<AppState>,
     Json(body): Json<CreateTaskBody>,
 ) -> Result<impl IntoResponse, AppError> {
-    // title is required
+    // title is required and must not be empty after trimming
     let title = body
         .title
         .ok_or_else(|| AppError::Validation("title is required".to_string()))?;
+    let title = {
+        let t = title.trim().to_string();
+        if t.is_empty() {
+            return Err(AppError::Validation("title is required".to_string()));
+        }
+        t
+    };
 
     let priority = body.priority.unwrap_or(2);
     let description = body.description.clone();
@@ -892,6 +899,14 @@ pub struct EpicDetailQuery {
 #[template(path = "task_new.html")]
 struct TaskNewTemplate;
 
+/// Template for the task creation modal fragment at GET /tasks/new/modal.
+#[derive(Template)]
+#[template(path = "task_create_modal.html")]
+struct TaskCreateModalTemplate {
+    /// Epics available for selection as parent task.
+    epics: Vec<Task>,
+}
+
 /// Build a query string from current filter params for HTMX polling.
 fn build_poll_query(
     status: &Option<String>,
@@ -1028,6 +1043,41 @@ pub async fn task_list(
 /// GET /tasks/new — Create task form.
 pub async fn task_new() -> Response {
     render_template(TaskNewTemplate)
+}
+
+/// GET /tasks/new/modal — Task creation form as an HTML fragment for HTMX modal loading.
+///
+/// Returns a standalone HTML fragment (no DOCTYPE, no `<html>` wrapper) containing
+/// the create-task form.  The fragment is intended to be loaded into the `<dialog
+/// id="task-modal">` element via HTMX.  The parent dropdown is populated with all
+/// tasks that carry the "epic" tag.
+pub async fn task_create_modal(State(state): State<AppState>) -> Response {
+    let db = state.db.clone();
+    let result = tokio::task::spawn_blocking(move || -> Result<Vec<Task>, String> {
+        let db = db.lock().unwrap();
+        db.list_tasks(true, None, None, Some("epic"), None, None)
+    })
+    .await;
+
+    let epics = match result {
+        Ok(Ok(epics)) => epics,
+        Ok(Err(e)) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("database error: {e}"),
+            )
+                .into_response();
+        }
+        Err(e) => {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("spawn error: {e}"),
+            )
+                .into_response();
+        }
+    };
+
+    render_template(TaskCreateModalTemplate { epics })
 }
 
 /// Form body for POST /tasks (HTML form submission from task_new.html).

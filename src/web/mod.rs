@@ -48,6 +48,7 @@ pub fn create_router(state: AppState) -> Router {
         // HTML routes — specific routes before parameterized ones
         .route("/", get(handlers::index))
         .route("/tasks/new", get(handlers::task_new))
+        .route("/tasks/new/modal", get(handlers::task_create_modal))
         .route("/tasks/{id}", get(handlers::task_detail))
         .route(
             "/tasks",
