@@ -34,10 +34,10 @@
      hx-trigger="every 2s [document.visibilityState === 'visible']"
      hx-target="#board-columns"
      hx-select="#board-columns">
-  <div>
+  <div class="board-column" data-status="open">
     <h2>Open</h2>
     {% for row in open_tasks %}
-    <article class="board-card">
+    <article class="board-card" draggable="true" data-task-id="{{ row.task.id }}">
       <div class="board-card-header">
         <a href="/tasks/{{ row.task.id }}"
            hx-get="/tasks/{{ row.task.id }}"
@@ -49,10 +49,10 @@
     </article>
     {% endfor %}
   </div>
-  <div>
+  <div class="board-column" data-status="in_progress">
     <h2>In Progress</h2>
     {% for row in in_progress_tasks %}
-    <article class="board-card">
+    <article class="board-card" draggable="true" data-task-id="{{ row.task.id }}">
       <div class="board-card-header">
         <a href="/tasks/{{ row.task.id }}"
            hx-get="/tasks/{{ row.task.id }}"
@@ -64,10 +64,10 @@
     </article>
     {% endfor %}
   </div>
-  <div>
+  <div class="board-column" data-status="blocked">
     <h2>Blocked</h2>
     {% for row in blocked_tasks %}
-    <article class="board-card">
+    <article class="board-card" draggable="true" data-task-id="{{ row.task.id }}">
       <div class="board-card-header">
         <a href="/tasks/{{ row.task.id }}"
            hx-get="/tasks/{{ row.task.id }}"
@@ -79,10 +79,10 @@
     </article>
     {% endfor %}
   </div>
-  <div>
+  <div class="board-column" data-status="done">
     <h2>Done</h2>
     {% for row in done_tasks %}
-    <article class="board-card">
+    <article class="board-card" draggable="true" data-task-id="{{ row.task.id }}">
       <div class="board-card-header">
         <a href="/tasks/{{ row.task.id }}"
            hx-get="/tasks/{{ row.task.id }}"

@@ -250,8 +250,15 @@
     }
   });
 
-  // Pause HTMX polling swaps while inline editing is active
+  // Pause HTMX polling swaps while inline editing or dragging is active
   document.addEventListener('htmx:beforeSwap', function (e) {
+    // Guard board-columns polling swaps when dragging
+    if (e.detail.target && e.detail.target.id === 'board-columns') {
+      if (document.querySelector('.board-card.dragging')) {
+        e.detail.shouldSwap = false;
+        return;
+      }
+    }
     // Only guard tbody polling swaps, not full content-area navigations
     if (e.detail.target && e.detail.target.tagName === 'TBODY') {
       var editing = document.querySelector('[data-editable].editing');
@@ -703,6 +710,128 @@
     // Don't start a new edit if we clicked inside an already-active input
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
     beginEdit(el);
+  });
+
+  // --- Board drag-and-drop ---
+
+  // Track the card being dragged and its original column for revert on failure.
+  var dragState = null;
+
+  // Find the nearest .board-column ancestor of an element (or null).
+  function getBoardColumn(el) {
+    return el ? el.closest('.board-column') : null;
+  }
+
+  // dragstart: capture source info and add .dragging class
+  document.addEventListener('dragstart', function (e) {
+    var card = e.target.closest('.board-card[data-task-id]');
+    if (!card) return;
+
+    var sourceColumn = getBoardColumn(card);
+    if (!sourceColumn) return;
+
+    dragState = {
+      card: card,
+      taskId: card.getAttribute('data-task-id'),
+      sourceColumn: sourceColumn,
+      sourceStatus: sourceColumn.getAttribute('data-status'),
+    };
+
+    card.classList.add('dragging');
+    // Store task ID in dataTransfer so it works across iframes/tabs if needed
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', dragState.taskId);
+  });
+
+  // dragover: allow drop and highlight the target column
+  document.addEventListener('dragover', function (e) {
+    if (!dragState) return;
+    var col = getBoardColumn(e.target);
+    if (!col) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    // Remove drag-over from all columns, add to current target
+    document.querySelectorAll('.board-column.drag-over').forEach(function (c) {
+      if (c !== col) c.classList.remove('drag-over');
+    });
+    col.classList.add('drag-over');
+  });
+
+  // dragleave: remove highlight when leaving a column
+  document.addEventListener('dragleave', function (e) {
+    if (!dragState) return;
+    var col = getBoardColumn(e.target);
+    if (!col) return;
+    // Only remove if we've actually left the column (relatedTarget is outside it)
+    if (!col.contains(e.relatedTarget)) {
+      col.classList.remove('drag-over');
+    }
+  });
+
+  // dragend: always clean up .dragging and any leftover .drag-over classes
+  document.addEventListener('dragend', function (e) {
+    if (!dragState) return;
+    dragState.card.classList.remove('dragging');
+    document.querySelectorAll('.board-column.drag-over').forEach(function (c) {
+      c.classList.remove('drag-over');
+    });
+    // dragState is cleared in drop handler or here if drop didn't fire
+    dragState = null;
+  });
+
+  // drop: move the card and PATCH the API
+  document.addEventListener('drop', function (e) {
+    if (!dragState) return;
+    e.preventDefault();
+
+    var targetColumn = getBoardColumn(e.target);
+    if (!targetColumn) {
+      // Dropped outside a column — clean up and bail
+      dragState.card.classList.remove('dragging');
+      document.querySelectorAll('.board-column.drag-over').forEach(function (c) {
+        c.classList.remove('drag-over');
+      });
+      dragState = null;
+      return;
+    }
+
+    targetColumn.classList.remove('drag-over');
+
+    var targetStatus = targetColumn.getAttribute('data-status');
+    var card = dragState.card;
+    var taskId = dragState.taskId;
+    var sourceColumn = dragState.sourceColumn;
+    // Clear dragState before async work to allow new drags
+    dragState = null;
+
+    card.classList.remove('dragging');
+
+    // No-op: dropped on the same column
+    if (targetStatus === sourceColumn.getAttribute('data-status')) {
+      return;
+    }
+
+    // Optimistic UI: move card to target column immediately
+    targetColumn.appendChild(card);
+
+    // PATCH the API to persist the status change
+    fetch('/api/tasks/' + taskId, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: targetStatus }),
+    })
+      .then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        // Success — card is already in the right column
+      })
+      .catch(function () {
+        // Failure — revert card to its original column and flash error
+        sourceColumn.appendChild(card);
+        card.classList.add('drag-error');
+        setTimeout(function () {
+          card.classList.remove('drag-error');
+        }, 700);
+      });
   });
 
   // --- Global keydown handler ---

@@ -98,11 +98,11 @@
 <p>No subtasks yet.</p>
 {% else %}
 <div class="grid">
-  <div>
+  <div class="board-column" data-status="open">
     <h3>Open</h3>
     {% for child in &children %}
     {%- if child.status == crate::models::Status::Open -%}
-    <article class="board-card">
+    <article class="board-card" draggable="true" data-task-id="{{ child.id }}">
       <a href="/tasks/{{ child.id }}"
          hx-get="/tasks/{{ child.id }}"
          hx-target="#task-modal"
@@ -115,11 +115,11 @@
     {%- endif -%}
     {% endfor %}
   </div>
-  <div>
+  <div class="board-column" data-status="in_progress">
     <h3>In Progress</h3>
     {% for child in &children %}
     {%- if child.status == crate::models::Status::InProgress -%}
-    <article class="board-card">
+    <article class="board-card" draggable="true" data-task-id="{{ child.id }}">
       <a href="/tasks/{{ child.id }}"
          hx-get="/tasks/{{ child.id }}"
          hx-target="#task-modal"
@@ -132,11 +132,11 @@
     {%- endif -%}
     {% endfor %}
   </div>
-  <div>
+  <div class="board-column" data-status="blocked">
     <h3>Blocked</h3>
     {% for child in &children %}
     {%- if child.status == crate::models::Status::Blocked -%}
-    <article class="board-card">
+    <article class="board-card" draggable="true" data-task-id="{{ child.id }}">
       <a href="/tasks/{{ child.id }}"
          hx-get="/tasks/{{ child.id }}"
          hx-target="#task-modal"
@@ -149,11 +149,11 @@
     {%- endif -%}
     {% endfor %}
   </div>
-  <div>
+  <div class="board-column" data-status="done">
     <h3>Done</h3>
     {% for child in &children %}
     {%- if child.status == crate::models::Status::Done -%}
-    <article class="board-card">
+    <article class="board-card" draggable="true" data-task-id="{{ child.id }}">
       <a href="/tasks/{{ child.id }}"
          hx-get="/tasks/{{ child.id }}"
          hx-target="#task-modal"
