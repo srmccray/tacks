@@ -23,8 +23,6 @@
   <span class="meta-item"><span class="meta-label">Epic</span> <a href="/epics/{{ p.id }}" class="epic-badge">{{ p.id }}: {{ p.title }}</a></span>
   {% endif %}
   <span class="meta-sep">·</span>
-  <span class="meta-item" data-editable data-field="assignee" data-task-id="{{ task.id }}"><span class="meta-label">Assignee</span> {{ task.assignee.as_deref().unwrap_or("—") }}</span>
-  <span class="meta-sep">·</span>
   <span class="meta-item" data-editable data-field="tags" data-task-id="{{ task.id }}">
     {% for tag in &task.tags %}<span class="tag-pill">{{ tag }}</span>{% endfor %}
     {% if task.tags.is_empty() %}<span class="meta-label">Tags</span> —{% endif %}

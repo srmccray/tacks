@@ -56,7 +56,6 @@
       <th>Status</th>
       <th>Priority</th>
       <th>Tags</th>
-      <th>Assignee</th>
       <th>Updated</th>
     </tr>
   </thead>
@@ -85,7 +84,6 @@
       </span></td>
       <td data-editable data-field="priority" data-task-id="{{ row.task.id }}"><span class="badge priority-{{ row.task.priority }}">P{{ row.task.priority }}</span></td>
       <td data-editable data-field="tags" data-task-id="{{ row.task.id }}">{% for tag in &row.task.tags %}<span class="tag-pill">{{ tag }}</span> {% endfor %}</td>
-      <td data-editable data-field="assignee" data-task-id="{{ row.task.id }}">{{ row.task.assignee.as_deref().unwrap_or_default() }}</td>
       <td class="col-updated">{{ row.task.updated_at.format("%b %d %H:%M") }}</td>
     </tr>
     {% endfor %}
