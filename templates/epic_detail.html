@@ -107,16 +107,16 @@
     {% for child in &children %}
     {%- if child.status == crate::models::Status::Open -%}
     <article class="board-card" draggable="true" data-task-id="{{ child.id }}">
-      <a href="/tasks/{{ child.id }}"
-         hx-get="/tasks/{{ child.id }}"
-         hx-target="#task-modal"
-         hx-select="unset"
-         hx-swap="innerHTML">{{ child.title }}</a>
-      <footer class="board-card-footer">
+      <div class="board-card-header">
+        <a href="/tasks/{{ child.id }}"
+           hx-get="/tasks/{{ child.id }}"
+           hx-target="#task-modal"
+           hx-select="unset"
+           hx-swap="innerHTML">{{ child.title }}</a>
         <span class="badge priority-{{ child.priority }}">
           {%- if child.priority == 1 -%}▲ P1{%- else if child.priority == 2 -%}▬ P2{%- else if child.priority == 3 -%}▽ P3{%- else -%}· P4{%- endif -%}
         </span>
-      </footer>
+      </div>
     </article>
     {%- endif -%}
     {% endfor %}
@@ -126,16 +126,16 @@
     {% for child in &children %}
     {%- if child.status == crate::models::Status::InProgress -%}
     <article class="board-card" draggable="true" data-task-id="{{ child.id }}">
-      <a href="/tasks/{{ child.id }}"
-         hx-get="/tasks/{{ child.id }}"
-         hx-target="#task-modal"
-         hx-select="unset"
-         hx-swap="innerHTML">{{ child.title }}</a>
-      <footer class="board-card-footer">
+      <div class="board-card-header">
+        <a href="/tasks/{{ child.id }}"
+           hx-get="/tasks/{{ child.id }}"
+           hx-target="#task-modal"
+           hx-select="unset"
+           hx-swap="innerHTML">{{ child.title }}</a>
         <span class="badge priority-{{ child.priority }}">
           {%- if child.priority == 1 -%}▲ P1{%- else if child.priority == 2 -%}▬ P2{%- else if child.priority == 3 -%}▽ P3{%- else -%}· P4{%- endif -%}
         </span>
-      </footer>
+      </div>
     </article>
     {%- endif -%}
     {% endfor %}
@@ -145,16 +145,16 @@
     {% for child in &children %}
     {%- if child.status == crate::models::Status::Blocked -%}
     <article class="board-card" draggable="true" data-task-id="{{ child.id }}">
-      <a href="/tasks/{{ child.id }}"
-         hx-get="/tasks/{{ child.id }}"
-         hx-target="#task-modal"
-         hx-select="unset"
-         hx-swap="innerHTML">{{ child.title }}</a>
-      <footer class="board-card-footer">
+      <div class="board-card-header">
+        <a href="/tasks/{{ child.id }}"
+           hx-get="/tasks/{{ child.id }}"
+           hx-target="#task-modal"
+           hx-select="unset"
+           hx-swap="innerHTML">{{ child.title }}</a>
         <span class="badge priority-{{ child.priority }}">
           {%- if child.priority == 1 -%}▲ P1{%- else if child.priority == 2 -%}▬ P2{%- else if child.priority == 3 -%}▽ P3{%- else -%}· P4{%- endif -%}
         </span>
-      </footer>
+      </div>
     </article>
     {%- endif -%}
     {% endfor %}
@@ -164,16 +164,16 @@
     {% for child in &children %}
     {%- if child.status == crate::models::Status::Done -%}
     <article class="board-card" draggable="true" data-task-id="{{ child.id }}">
-      <a href="/tasks/{{ child.id }}"
-         hx-get="/tasks/{{ child.id }}"
-         hx-target="#task-modal"
-         hx-select="unset"
-         hx-swap="innerHTML">{{ child.title }}</a>
-      <footer class="board-card-footer">
+      <div class="board-card-header">
+        <a href="/tasks/{{ child.id }}"
+           hx-get="/tasks/{{ child.id }}"
+           hx-target="#task-modal"
+           hx-select="unset"
+           hx-swap="innerHTML">{{ child.title }}</a>
         <span class="badge priority-{{ child.priority }}">
           {%- if child.priority == 1 -%}▲ P1{%- else if child.priority == 2 -%}▬ P2{%- else if child.priority == 3 -%}▽ P3{%- else -%}· P4{%- endif -%}
         </span>
-      </footer>
+      </div>
     </article>
     {%- endif -%}
     {% endfor %}

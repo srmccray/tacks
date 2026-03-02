@@ -154,6 +154,47 @@
     }
   }
 
+  // --- Toast notifications ---
+
+  /**
+   * Show a transient toast notification.
+   *
+   * @param {string} message - The text to display.
+   * @param {string} [type='error'] - One of 'error', 'success', or 'info'.
+   * @param {number} [duration=4000] - Milliseconds before auto-dismiss.
+   */
+  function showToast(message, type, duration) {
+    type = type || 'error';
+    duration = duration !== undefined ? duration : 4000;
+
+    var container = document.getElementById('toast-container');
+    if (!container) return;
+
+    var toast = document.createElement('div');
+    toast.className = 'toast toast-' + type;
+    toast.textContent = message;
+
+    container.appendChild(toast);
+
+    // Auto-hide after duration: add the hiding class, then remove from DOM
+    var hideTimer = setTimeout(function () {
+      toast.classList.add('toast-hiding');
+      // Remove after CSS transition completes (400 ms)
+      setTimeout(function () {
+        if (toast.parentNode) toast.parentNode.removeChild(toast);
+      }, 450);
+    }, duration);
+
+    // Clicking dismisses immediately
+    toast.addEventListener('click', function () {
+      clearTimeout(hideTimer);
+      toast.classList.add('toast-hiding');
+      setTimeout(function () {
+        if (toast.parentNode) toast.parentNode.removeChild(toast);
+      }, 450);
+    });
+  }
+
   // --- Utilities ---
 
   function isTypingTarget(el) {
@@ -752,11 +793,12 @@
         el.innerHTML = renderSavedValue(field, payload[field]);
       })
       .catch(function () {
-        // Failed — revert to original and flash error
+        // Failed — revert to original, flash error, and show toast
         editingState.delete(el);
         el.classList.remove('editing');
         el.innerHTML = state.original;
         flashError(el);
+        showToast('Failed to save — change not applied', 'error');
       });
   }
 
@@ -1088,12 +1130,13 @@
         // Success — card is already in the right column
       })
       .catch(function () {
-        // Failure — revert card to its original column and flash error
+        // Failure — revert card to its original column, flash error, and show toast
         sourceColumn.appendChild(card);
         card.classList.add('drag-error');
         setTimeout(function () {
           card.classList.remove('drag-error');
         }, 700);
+        showToast('Failed to move task — status not updated', 'error');
       });
   });
 
