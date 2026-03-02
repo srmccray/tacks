@@ -563,6 +563,23 @@ a.view-toggle-btn:hover {
   text-decoration: underline dotted var(--pico-muted-color, #6b7280);
 }
 
+/* Pencil icon affordance — appears on hover to indicate the field is editable */
+[data-editable]:not(.editing)::after {
+  content: '';
+  display: none;
+}
+
+[data-editable]:not(.editing):hover::after {
+  content: ' \270E'; /* ✎ pencil */
+  display: inline;
+  font-size: 0.75em;
+  opacity: 0.45;
+  margin-left: 0.2em;
+  vertical-align: middle;
+  font-style: normal;
+  text-decoration: none;
+}
+
 /* Inputs created by inline edit inherit surrounding typography */
 .inline-edit-input {
   font-size: inherit;
@@ -639,4 +656,10 @@ a.view-toggle-btn:hover {
   0%, 100% { transform: translateX(0); }
   25% { transform: translateX(-4px); }
   75% { transform: translateX(4px); }
+}
+
+/* Modal title: leave room for the Pico CSS close button (rel=prev, abs-positioned top-right) */
+#task-modal article header h3 {
+  padding-right: 2.5rem;
+  margin-bottom: 0;
 }
