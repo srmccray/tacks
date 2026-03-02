@@ -927,6 +927,17 @@ a.view-toggle-btn:hover {
   75% { transform: translateX(4px); }
 }
 
+/* Validation error indicator on the input/select/textarea itself */
+.edit-input-error {
+  outline: 2px solid #ef4444 !important;
+  background-color: color-mix(in srgb, #ef4444 6%, transparent) !important;
+}
+
+[data-theme="dark"] .edit-input-error {
+  outline-color: #f87171 !important;
+  background-color: color-mix(in srgb, #ef4444 12%, transparent) !important;
+}
+
 /* Modal title: leave room for the Pico CSS close button (rel=prev, abs-positioned top-right) */
 #task-modal article header h3 {
   padding-right: 2.5rem;

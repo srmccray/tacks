@@ -751,10 +751,63 @@
     }, 2000);
   }
 
+  // Validate a field value before committing.
+  // Returns { valid: true } on success, or { valid: false, message: string } on failure.
+  // Side-effect: for 'tags', mutates rawValue into cleaned form (caller uses the returned cleaned value).
+  function validateEdit(field, rawValue) {
+    if (field === 'title') {
+      if (!rawValue || rawValue.trim().length === 0) {
+        return { valid: false, message: 'title cannot be empty' };
+      }
+    } else if (field === 'priority') {
+      // Allow empty string (clears priority) or a number 1-4
+      var trimmed = rawValue.trim();
+      if (trimmed !== '') {
+        var num = Number(trimmed);
+        if (!Number.isInteger(num) || num < 1 || num > 4) {
+          return { valid: false, message: 'priority must be a number between 1 and 4' };
+        }
+      }
+    } else if (field === 'status') {
+      var validStatuses = ['open', 'in_progress', 'done', 'blocked'];
+      if (validStatuses.indexOf(rawValue) === -1) {
+        return { valid: false, message: 'status must be one of: open, in_progress, done, blocked' };
+      }
+    }
+    return { valid: true };
+  }
+
   // Commit an edit: PATCH the server and update the DOM on success
   function commitEdit(el, field, rawValue) {
     var state = editingState.get(el);
     if (!state || state.saved) return;
+
+    // Clean up tags before validation: trim each tag, remove empty ones
+    if (field === 'tags') {
+      rawValue = rawValue
+        .split(',')
+        .map(function (t) { return t.trim(); })
+        .filter(function (t) { return t.length > 0; })
+        .join(', ');
+    }
+
+    // Validate before firing the PATCH
+    var validation = validateEdit(field, rawValue);
+    if (!validation.valid) {
+      // Keep edit mode active — do NOT set state.saved
+      showToast(validation.message, 'error');
+      // Add a visual error indicator on the input
+      var inputEl = el.querySelector('input, textarea, select');
+      if (inputEl) {
+        inputEl.classList.add('edit-input-error');
+        // Remove error styling as soon as the user starts correcting the value
+        var clearError = function () { inputEl.classList.remove('edit-input-error'); };
+        inputEl.addEventListener('input', clearError, { once: true });
+        inputEl.addEventListener('change', clearError, { once: true });
+      }
+      return;
+    }
+
     state.saved = true;
 
     var taskId = el.getAttribute('data-task-id');
