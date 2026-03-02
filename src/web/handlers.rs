@@ -1,8 +1,9 @@
 use askama::Template;
+use axum::Form;
 use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::http::{HeaderMap, StatusCode};
-use axum::response::{Html, IntoResponse, Response};
+use axum::response::{Html, IntoResponse, Redirect, Response};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::sync::atomic::Ordering;
@@ -1022,6 +1023,61 @@ pub async fn task_list(
 /// GET /tasks/new — Create task form.
 pub async fn task_new() -> Response {
     render_template(TaskNewTemplate)
+}
+
+/// Form body for POST /tasks (HTML form submission from task_new.html).
+#[derive(Debug, Deserialize)]
+pub struct CreateTaskFormBody {
+    pub title: String,
+    pub description: Option<String>,
+    pub priority: Option<u8>,
+}
+
+/// POST /tasks — Handle HTML form submission from the create-task form.
+///
+/// Accepts `application/x-www-form-urlencoded` body, creates the task, then
+/// issues a 303 redirect to `/tasks` so the user lands on the task list.
+/// The JSON API at `POST /api/tasks` is unchanged and continues to return 201.
+pub async fn task_create_form(
+    State(state): State<AppState>,
+    Form(body): Form<CreateTaskFormBody>,
+) -> Result<impl IntoResponse, AppError> {
+    let title = body.title.trim().to_string();
+    if title.is_empty() {
+        return Err(AppError::Validation("title is required".to_string()));
+    }
+    let priority = body.priority.unwrap_or(2);
+    let description = body
+        .description
+        .filter(|d| !d.trim().is_empty())
+        .map(|d| d.trim().to_string());
+
+    let db = state.db.clone();
+    tokio::task::spawn_blocking(move || -> Result<(), String> {
+        let db = db.lock().unwrap();
+        let id = db.generate_id()?;
+        let now = chrono::Utc::now();
+        let task = Task {
+            id,
+            title,
+            description,
+            status: crate::models::Status::Open,
+            priority,
+            assignee: None,
+            parent_id: None,
+            tags: vec![],
+            created_at: now,
+            updated_at: now,
+            close_reason: None,
+            notes: None,
+        };
+        db.insert_task(&task)
+    })
+    .await
+    .map_err(|e| AppError::Internal(e.to_string()))?
+    .map_err(AppError::Internal)?;
+
+    Ok(Redirect::to("/tasks"))
 }
 
 /// All data needed to render a task detail view (full page or modal fragment).

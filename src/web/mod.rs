@@ -49,7 +49,10 @@ pub fn create_router(state: AppState) -> Router {
         .route("/", get(handlers::index))
         .route("/tasks/new", get(handlers::task_new))
         .route("/tasks/{id}", get(handlers::task_detail))
-        .route("/tasks", get(handlers::task_list))
+        .route(
+            "/tasks",
+            get(handlers::task_list).post(handlers::task_create_form),
+        )
         .route("/board", get(handlers::board))
         .route("/epics", get(handlers::epics))
         .route("/epics/{id}", get(handlers::epic_detail))
