@@ -637,6 +637,40 @@
     return el.textContent.trim();
   }
 
+  // Create save (✓) and cancel (✗) action buttons for text-mode edits
+  function createActionButtons(el, field, input) {
+    var actions = document.createElement('span');
+    actions.className = 'inline-edit-actions';
+
+    var saveBtn = document.createElement('button');
+    saveBtn.type = 'button';
+    saveBtn.className = 'inline-edit-btn inline-edit-btn-save';
+    saveBtn.setAttribute('aria-label', 'Save');
+    saveBtn.textContent = '\u2713'; // ✓
+
+    var cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.className = 'inline-edit-btn inline-edit-btn-cancel';
+    cancelBtn.setAttribute('aria-label', 'Cancel');
+    cancelBtn.textContent = '\u2715'; // ✕
+
+    // mousedown: prevent blur from firing before the click completes
+    saveBtn.addEventListener('mousedown', function (e) { e.preventDefault(); });
+    cancelBtn.addEventListener('mousedown', function (e) { e.preventDefault(); });
+
+    saveBtn.addEventListener('click', function () {
+      commitEdit(el, field, input.value);
+    });
+
+    cancelBtn.addEventListener('click', function () {
+      cancelEdit(el);
+    });
+
+    actions.appendChild(saveBtn);
+    actions.appendChild(cancelBtn);
+    return actions;
+  }
+
   // Begin editing an element
   function beginEdit(el) {
     // Already editing?
@@ -653,18 +687,11 @@
 
     var input = createInput(field, currentText);
 
-    // Clear element and insert input
-    el.innerHTML = '';
-    el.appendChild(input);
-
-    // Focus and select text
-    input.focus();
-    if (input.select) {
-      input.select();
-    }
-
-    // For select elements, save immediately on change
+    // For select elements: insert directly (no wrapper/buttons), save on change
     if (field === 'status' || field === 'priority') {
+      el.innerHTML = '';
+      el.appendChild(input);
+      input.focus();
       input.addEventListener('change', function () {
         commitEdit(el, field, input.value);
       });
@@ -677,6 +704,53 @@
         }
       });
       return;
+    }
+
+    // For text inputs and textareas: wrap in flex row with save/cancel buttons
+    var wrapper = document.createElement('span');
+    wrapper.className = 'inline-edit-wrapper';
+    wrapper.appendChild(input);
+
+    // Textareas span the full width — buttons go below rather than inline
+    if (field !== 'description') {
+      wrapper.appendChild(createActionButtons(el, field, input));
+    }
+
+    el.innerHTML = '';
+    el.appendChild(wrapper);
+
+    // For description textarea, add a block-level actions row below
+    if (field === 'description') {
+      var blockActions = document.createElement('div');
+      blockActions.className = 'inline-edit-actions';
+      blockActions.style.marginTop = '0.35em';
+
+      var saveBtn2 = document.createElement('button');
+      saveBtn2.type = 'button';
+      saveBtn2.className = 'inline-edit-btn inline-edit-btn-save';
+      saveBtn2.setAttribute('aria-label', 'Save');
+      saveBtn2.textContent = '\u2713';
+
+      var cancelBtn2 = document.createElement('button');
+      cancelBtn2.type = 'button';
+      cancelBtn2.className = 'inline-edit-btn inline-edit-btn-cancel';
+      cancelBtn2.setAttribute('aria-label', 'Cancel');
+      cancelBtn2.textContent = '\u2715';
+
+      saveBtn2.addEventListener('mousedown', function (e) { e.preventDefault(); });
+      cancelBtn2.addEventListener('mousedown', function (e) { e.preventDefault(); });
+      saveBtn2.addEventListener('click', function () { commitEdit(el, field, input.value); });
+      cancelBtn2.addEventListener('click', function () { cancelEdit(el); });
+
+      blockActions.appendChild(saveBtn2);
+      blockActions.appendChild(cancelBtn2);
+      el.appendChild(blockActions);
+    }
+
+    // Focus and select text
+    input.focus();
+    if (input.select) {
+      input.select();
     }
 
     // For text inputs and textareas: save on Enter (text only), Escape cancels
@@ -694,8 +768,10 @@
       }
     });
 
-    // Save on blur (handles click-away)
-    input.addEventListener('blur', function () {
+    // Save on blur (handles click-away), but only if not clicking an action button
+    input.addEventListener('blur', function (e) {
+      // relatedTarget is the element receiving focus — skip blur-save if it's one of our buttons
+      if (e.relatedTarget && e.relatedTarget.closest('.inline-edit-actions')) return;
       var state = editingState.get(el);
       if (state && !state.saved) {
         commitEdit(el, field, input.value);
@@ -707,8 +783,9 @@
   document.addEventListener('click', function (e) {
     var el = e.target.closest('[data-editable]');
     if (!el) return;
-    // Don't start a new edit if we clicked inside an already-active input
+    // Don't start a new edit if we clicked inside an already-active input or action button
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+    if (e.target.closest('.inline-edit-actions')) return;
     beginEdit(el);
   });
 

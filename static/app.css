@@ -580,6 +580,15 @@ a.view-toggle-btn:hover {
   text-decoration: none;
 }
 
+/* Editable cell wrapper: flex row so input + buttons stay on one line */
+.inline-edit-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.25em;
+  width: 100%;
+  min-width: 0;
+}
+
 /* Inputs created by inline edit inherit surrounding typography */
 .inline-edit-input {
   font-size: inherit;
@@ -593,12 +602,72 @@ a.view-toggle-btn:hover {
   outline: none;
   padding: 0;
   margin: 0;
-  width: 100%;
+  /* Shrink to fit remaining space beside the action buttons */
+  flex: 1;
+  min-width: 0;
   box-sizing: border-box;
 }
 
 .inline-edit-input:focus {
   outline: none;
+}
+
+/* Save/cancel action buttons shown during inline edit */
+.inline-edit-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15em;
+  flex-shrink: 0;
+}
+
+.inline-edit-btn {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4em;
+  height: 1.4em;
+  border-radius: 50%;
+  font-size: 0.75em;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.1s, color 0.1s;
+}
+
+.inline-edit-btn-save {
+  color: #15803d;
+  background-color: color-mix(in srgb, #22c55e 15%, transparent);
+}
+
+.inline-edit-btn-save:hover {
+  background-color: color-mix(in srgb, #22c55e 30%, transparent);
+}
+
+.inline-edit-btn-cancel {
+  color: #b91c1c;
+  background-color: color-mix(in srgb, #ef4444 10%, transparent);
+}
+
+.inline-edit-btn-cancel:hover {
+  background-color: color-mix(in srgb, #ef4444 25%, transparent);
+}
+
+[data-theme="dark"] .inline-edit-btn-save {
+  color: #4ade80;
+  background-color: color-mix(in srgb, #22c55e 20%, transparent);
+}
+
+[data-theme="dark"] .inline-edit-btn-save:hover {
+  background-color: color-mix(in srgb, #22c55e 35%, transparent);
+}
+
+[data-theme="dark"] .inline-edit-btn-cancel {
+  color: #f87171;
+  background-color: color-mix(in srgb, #ef4444 15%, transparent);
+}
+
+[data-theme="dark"] .inline-edit-btn-cancel:hover {
+  background-color: color-mix(in srgb, #ef4444 30%, transparent);
 }
 
 /* Select inputs in edit mode */
