@@ -88,7 +88,9 @@
   <tbody hx-get="/tasks{{ poll_query }}"
          hx-trigger="every 2s [document.visibilityState === 'visible']"
          hx-select="tbody"
-         hx-swap="outerHTML">
+         hx-swap="outerHTML"
+         aria-live="polite"
+         aria-atomic="false">
     {% if tasks.is_empty() %}
     <tr>
       <td colspan="6" style="text-align:center;color:var(--pico-muted-color);padding:2rem 0">

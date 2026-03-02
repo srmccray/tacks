@@ -7,7 +7,9 @@
      hx-get="/epics/{{ task.id }}?view={{ view }}"
      hx-trigger="every 2s [document.visibilityState === 'visible']"
      hx-target="this"
-     hx-select="#content-area">
+     hx-select="#content-area"
+     aria-live="polite"
+     aria-atomic="false">
 
 <p><a href="/epics">&#8592; Back to epics</a></p>
 

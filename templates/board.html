@@ -33,7 +33,9 @@
      hx-get="/board{{ poll_query }}"
      hx-trigger="every 2s [document.visibilityState === 'visible']"
      hx-target="#board-columns"
-     hx-select="#board-columns">
+     hx-select="#board-columns"
+     aria-live="polite"
+     aria-atomic="false">
   <div class="board-column" data-status="open">
     <h2>Open</h2>
     {% for row in open_tasks %}

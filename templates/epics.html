@@ -7,7 +7,9 @@
      hx-get="/epics"
      hx-trigger="every 2s [document.visibilityState === 'visible']"
      hx-target="this"
-     hx-select="#content-area">
+     hx-select="#content-area"
+     aria-live="polite"
+     aria-atomic="false">
 
 <table>
   <thead>
