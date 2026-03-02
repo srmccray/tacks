@@ -91,7 +91,7 @@
   <tbody hx-get="/tasks{{ poll_query }}"
          hx-trigger="every 2s [document.visibilityState === 'visible']"
          hx-select="tbody"
-         hx-swap="outerHTML"
+         hx-swap="outerHTML show:none"
          aria-live="polite"
          aria-atomic="false">
     {% if tasks.is_empty() %}

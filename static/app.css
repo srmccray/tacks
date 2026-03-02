@@ -773,7 +773,7 @@ a.view-toggle-btn:hover {
   content: ' \270E'; /* ✎ pencil */
   display: inline;
   font-size: 0.75em;
-  opacity: 0.45;
+  opacity: 0.65;
   margin-left: 0.2em;
   vertical-align: middle;
   font-style: normal;
@@ -984,6 +984,17 @@ a.view-toggle-btn:hover {
 @keyframes drag-error-flash {
   0%, 100% { background-color: transparent; }
   30% { background-color: color-mix(in srgb, #ef4444 20%, transparent); }
+}
+
+/* Pending state while DnD PATCH is in-flight: subtle pulse to signal activity */
+.board-card.drag-pending {
+  opacity: 0.6;
+  animation: drag-pending-pulse 1s ease-in-out infinite;
+}
+
+@keyframes drag-pending-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 0.85; }
 }
 
 /* --- Toast notification system --- */

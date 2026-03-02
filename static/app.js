@@ -749,6 +749,10 @@
   // WeakMap<HTMLElement, { saved: boolean, original: string }>
   var editingState = new WeakMap();
 
+  // Track elements with an in-flight PATCH request to prevent duplicate saves.
+  // Cleared when the fetch settles (success or failure).
+  var patchInFlight = new WeakSet();
+
   // Build a status badge HTML string for re-rendering after save
   function statusBadgeHtml(status) {
     var icons = { open: '○', in_progress: '◐', done: '✓', blocked: '⊘' };
@@ -835,6 +839,8 @@
   function commitEdit(el, field, rawValue) {
     var state = editingState.get(el);
     if (!state || state.saved) return;
+    // Prevent duplicate PATCHes: if a request is already in-flight for this element, bail out
+    if (patchInFlight.has(el)) return;
 
     // Clean up tags before validation: trim each tag, remove empty ones
     if (field === 'tags') {
@@ -884,6 +890,7 @@
       payload[field] = rawValue;
     }
 
+    patchInFlight.add(el);
     fetch('/api/tasks/' + taskId, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -895,12 +902,14 @@
       })
       .then(function () {
         // Successful save — render the new value
+        patchInFlight.delete(el);
         editingState.delete(el);
         el.classList.remove('editing');
         el.innerHTML = renderSavedValue(field, payload[field]);
       })
       .catch(function () {
         // Failed — revert to original, flash error, and show toast
+        patchInFlight.delete(el);
         editingState.delete(el);
         el.classList.remove('editing');
         el.innerHTML = state.original;
@@ -1226,6 +1235,9 @@
     // Optimistic UI: move card to target column immediately
     targetColumn.appendChild(card);
 
+    // Show a pending indicator while the PATCH is in-flight
+    card.classList.add('drag-pending');
+
     // PATCH the API to persist the status change
     fetch('/api/tasks/' + taskId, {
       method: 'PATCH',
@@ -1234,10 +1246,12 @@
     })
       .then(function (r) {
         if (!r.ok) throw new Error('HTTP ' + r.status);
-        // Success — card is already in the right column
+        // Success — card is already in the right column, remove pending indicator
+        card.classList.remove('drag-pending');
       })
       .catch(function () {
         // Failure — revert card to its original column, flash error, and show toast
+        card.classList.remove('drag-pending');
         sourceColumn.appendChild(card);
         card.classList.add('drag-error');
         setTimeout(function () {
