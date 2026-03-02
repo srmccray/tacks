@@ -1053,3 +1053,171 @@ a.view-toggle-btn:hover {
   color: #93c5fd;
   border-color: #1e3a5f;
 }
+
+/* --- Focus indicators (:focus-visible) --- */
+/*
+ * Consistent 2px solid outline using the project purple (--pico-primary).
+ * `:focus-visible` prevents focus rings on mouse clicks while keeping them
+ * for keyboard navigation, as per WCAG 2.4.7 and 2.4.11.
+ * All elements below suppress the browser default outline first, then
+ * re-apply our custom one via :focus-visible.
+ */
+
+/* Global reset: suppress browser default outlines on interactive elements.
+ * We then selectively restore visible focus rings below. */
+a:focus,
+button:focus,
+[tabindex]:focus,
+.filter-multiselect-trigger:focus,
+.tag-multiselect-trigger:focus,
+.settings-gear-btn:focus,
+[data-editable]:focus {
+  outline: none;
+}
+
+/* Nav tab links */
+nav.nav-tabs ul:last-child li a:focus-visible {
+  outline: 2px solid var(--pico-primary, #7c3aed);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Board cards (tabindex="0") */
+.board-card:focus-visible {
+  outline: 2px solid var(--pico-primary, #7c3aed);
+  outline-offset: 2px;
+  border-radius: var(--pico-border-radius, 0.25rem);
+}
+
+[data-theme="dark"] .board-card:focus-visible {
+  outline-color: var(--pico-primary, #a78bfa);
+}
+
+/* Board card inner links — suppress double ring when card already has focus */
+.board-card-header a:focus-visible {
+  outline: 2px solid var(--pico-primary, #7c3aed);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+[data-theme="dark"] .board-card-header a:focus-visible {
+  outline-color: var(--pico-primary, #a78bfa);
+}
+
+/* Task list links (ID column, epic-badge) */
+td a:focus-visible,
+.epic-badge:focus-visible {
+  outline: 2px solid var(--pico-primary, #7c3aed);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+[data-theme="dark"] td a:focus-visible,
+[data-theme="dark"] .epic-badge:focus-visible {
+  outline-color: var(--pico-primary, #a78bfa);
+}
+
+/* Editable fields — keyboard focus ring when NOT in edit mode */
+[data-editable]:not(.editing):focus-visible {
+  outline: 2px solid var(--pico-primary, #7c3aed);
+  outline-offset: 2px;
+  border-radius: var(--pico-border-radius, 0.25rem);
+}
+
+[data-theme="dark"] [data-editable]:not(.editing):focus-visible {
+  outline-color: var(--pico-primary, #a78bfa);
+}
+
+/* Multi-select triggers (status/priority/tag filters) */
+.filter-multiselect-trigger:focus-visible,
+.tag-multiselect-trigger:focus-visible {
+  outline: 2px solid var(--pico-primary, #7c3aed);
+  outline-offset: 2px;
+  /* Keep the existing box-shadow focus style as a secondary indicator */
+  box-shadow: 0 0 0 2px var(--pico-primary-focus, rgba(124, 58, 237, 0.375));
+}
+
+[data-theme="dark"] .filter-multiselect-trigger:focus-visible,
+[data-theme="dark"] .tag-multiselect-trigger:focus-visible {
+  outline-color: var(--pico-primary, #a78bfa);
+  box-shadow: 0 0 0 2px var(--pico-primary-focus, rgba(167, 139, 250, 0.375));
+}
+
+/* Filter pill remove buttons */
+.filter-tag-pill-remove:focus-visible,
+.filter-multiselect-pill-remove:focus-visible {
+  outline: 2px solid var(--pico-primary, #7c3aed);
+  outline-offset: 1px;
+  border-radius: 50%;
+}
+
+[data-theme="dark"] .filter-tag-pill-remove:focus-visible,
+[data-theme="dark"] .filter-multiselect-pill-remove:focus-visible {
+  outline-color: var(--pico-primary, #a78bfa);
+}
+
+/* Inline edit save/cancel buttons */
+.inline-edit-btn:focus-visible {
+  outline: 2px solid var(--pico-primary, #7c3aed);
+  outline-offset: 1px;
+}
+
+[data-theme="dark"] .inline-edit-btn:focus-visible {
+  outline-color: var(--pico-primary, #a78bfa);
+}
+
+/* Settings gear button */
+.settings-gear-btn:focus-visible {
+  outline: 2px solid var(--pico-primary, #7c3aed) !important;
+  outline-offset: 2px;
+  border-radius: var(--pico-border-radius, 0.25rem);
+}
+
+[data-theme="dark"] .settings-gear-btn:focus-visible {
+  outline-color: var(--pico-primary, #a78bfa) !important;
+}
+
+/* Settings menu buttons */
+.settings-menu-btn:focus-visible {
+  outline: 2px solid var(--pico-primary, #7c3aed);
+  outline-offset: -2px;
+}
+
+[data-theme="dark"] .settings-menu-btn:focus-visible {
+  outline-color: var(--pico-primary, #a78bfa);
+}
+
+/* View toggle buttons (epic detail list/board toggle) */
+a.view-toggle-btn:focus-visible {
+  outline: 2px solid var(--pico-primary, #7c3aed);
+  outline-offset: -2px;
+}
+
+[data-theme="dark"] a.view-toggle-btn:focus-visible {
+  outline-color: var(--pico-primary, #a78bfa);
+}
+
+/* Modal interactive elements: links inside modal article */
+#task-modal a:focus-visible,
+#task-modal button:focus-visible {
+  outline: 2px solid var(--pico-primary, #7c3aed);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+[data-theme="dark"] #task-modal a:focus-visible,
+[data-theme="dark"] #task-modal button:focus-visible {
+  outline-color: var(--pico-primary, #a78bfa);
+}
+
+/* Tag dropdown options (keyboard-navigable list items) */
+.tag-dropdown-option:focus-visible,
+.filter-multiselect-dropdown li:focus-visible {
+  outline: 2px solid var(--pico-primary, #7c3aed);
+  outline-offset: -2px;
+}
+
+[data-theme="dark"] .tag-dropdown-option:focus-visible,
+[data-theme="dark"] .filter-multiselect-dropdown li:focus-visible {
+  outline-color: var(--pico-primary, #a78bfa);
+}
