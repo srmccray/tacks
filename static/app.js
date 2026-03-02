@@ -457,6 +457,189 @@
     }
   });
 
+  // --- Filter multi-select widget ---
+
+  /**
+   * Initialize a filter multi-select widget.
+   *
+   * @param {HTMLElement} container - The `.filter-multiselect` element.
+   *
+   * The widget reads initial selection from the hidden input value (comma-separated).
+   * On toggle, it updates the hidden input and dispatches a `change` event with
+   * `bubbles: true` so HTMX's `change from:#<id>` trigger fires.
+   */
+  function initFilterMultiSelect(container) {
+    if (!container || container._msInitialized) return;
+    container._msInitialized = true;
+
+    var trigger = container.querySelector('.filter-multiselect-trigger');
+    var dropdown = container.querySelector('.filter-multiselect-dropdown');
+    var pillsEl = container.querySelector('.filter-multiselect-pills');
+    var placeholder = container.querySelector('.filter-multiselect-placeholder');
+    var hiddenInput = container.querySelector('input[type="hidden"]');
+    var items = Array.from(container.querySelectorAll('.filter-multiselect-dropdown li[role="option"]'));
+
+    if (!trigger || !dropdown || !pillsEl || !placeholder || !hiddenInput) return;
+
+    // --- State ---
+
+    // Parse current hidden input value into a set of selected values
+    function getSelected() {
+      var val = hiddenInput.value;
+      if (!val) return [];
+      return val.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+    }
+
+    var selected = getSelected();
+
+    // --- Rendering ---
+
+    function render() {
+      // Update aria-selected on each option
+      items.forEach(function (li) {
+        var v = li.getAttribute('data-value');
+        li.setAttribute('aria-selected', selected.indexOf(v) !== -1 ? 'true' : 'false');
+      });
+
+      // Rebuild pills
+      pillsEl.innerHTML = '';
+      selected.forEach(function (value) {
+        var item = items.find(function (li) { return li.getAttribute('data-value') === value; });
+        if (!item) return;
+        var label = item.getAttribute('data-label') || value;
+        var badgeClass = item.getAttribute('data-badge-class') || '';
+
+        var pill = document.createElement('span');
+        pill.className = 'filter-multiselect-pill badge ' + badgeClass;
+
+        var text = document.createElement('span');
+        text.textContent = label;
+
+        var removeBtn = document.createElement('button');
+        removeBtn.className = 'filter-multiselect-pill-remove';
+        removeBtn.type = 'button';
+        removeBtn.setAttribute('aria-label', 'Remove ' + label + ' filter');
+        removeBtn.textContent = '\u00d7'; // ×
+
+        removeBtn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          toggleValue(value);
+        });
+
+        pill.appendChild(text);
+        pill.appendChild(removeBtn);
+        pillsEl.appendChild(pill);
+      });
+
+      // Show/hide placeholder
+      placeholder.style.display = selected.length === 0 ? '' : 'none';
+
+      // Update hidden input and notify HTMX
+      var newVal = selected.join(',');
+      if (hiddenInput.value !== newVal) {
+        hiddenInput.value = newVal;
+        hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }
+
+    // --- Toggle a value in/out of selected ---
+
+    function toggleValue(value) {
+      var idx = selected.indexOf(value);
+      if (idx === -1) {
+        selected.push(value);
+      } else {
+        selected.splice(idx, 1);
+      }
+      render();
+    }
+
+    // --- Dropdown open/close ---
+
+    function openDropdown() {
+      dropdown.removeAttribute('hidden');
+      trigger.setAttribute('aria-expanded', 'true');
+    }
+
+    function closeDropdown() {
+      dropdown.setAttribute('hidden', '');
+      trigger.setAttribute('aria-expanded', 'false');
+    }
+
+    function isOpen() {
+      return !dropdown.hasAttribute('hidden');
+    }
+
+    // Trigger click: toggle dropdown
+    trigger.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (isOpen()) {
+        closeDropdown();
+      } else {
+        openDropdown();
+      }
+    });
+
+    // Keyboard: Enter/Space on trigger opens dropdown
+    trigger.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        if (isOpen()) {
+          closeDropdown();
+        } else {
+          openDropdown();
+        }
+      } else if (e.key === 'Escape') {
+        closeDropdown();
+      }
+    });
+
+    // Dropdown item clicks: use mousedown + preventDefault to avoid blur-before-click
+    dropdown.addEventListener('mousedown', function (e) {
+      e.preventDefault(); // prevent trigger blur before click fires
+    });
+
+    items.forEach(function (li) {
+      li.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var value = li.getAttribute('data-value');
+        if (value) toggleValue(value);
+      });
+    });
+
+    // Close when clicking outside
+    document.addEventListener('click', function (e) {
+      if (!container.contains(e.target)) {
+        closeDropdown();
+      }
+    });
+
+    // Initial render (reflects pre-selected values from URL params)
+    render();
+  }
+
+  function initAllFilterMultiSelects() {
+    var containers = document.querySelectorAll('.filter-multiselect');
+    containers.forEach(function (c) {
+      // Reset init flag on re-init so we recreate state from current DOM/URL
+      c._msInitialized = false;
+      initFilterMultiSelect(c);
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', initAllFilterMultiSelects);
+  document.addEventListener('htmx:afterSettle', function (e) {
+    var target = e.detail.target;
+    if (
+      target &&
+      (target.id === 'content-area' ||
+        target.id === 'main' ||
+        (target.querySelector && target.querySelector('.filter-multiselect')))
+    ) {
+      initAllFilterMultiSelects();
+    }
+  });
+
   // --- Inline editing ---
 
   // Track elements currently being edited to avoid double-saves.

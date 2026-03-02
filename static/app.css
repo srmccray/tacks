@@ -573,6 +573,154 @@ a.view-toggle-btn:hover {
   color: #fff;
 }
 
+/* Priority-4 badge (light theme) */
+.badge.priority-4 {
+  background-color: color-mix(in srgb, #6b7280 10%, transparent);
+  color: #6b7280;
+}
+
+/* Priority-4 badge (dark theme) */
+[data-theme="dark"] .badge.priority-4 {
+  background-color: color-mix(in srgb, #6b7280 20%, transparent);
+  color: #9ca3af;
+}
+
+/* --- Filter multi-select widget --- */
+
+/* Container: same look as .tag-autocomplete */
+.filter-multiselect {
+  position: relative;
+  box-sizing: border-box;
+}
+
+/* Trigger: the clickable "button" that shows selected pills */
+.filter-multiselect-trigger {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3em;
+  min-height: calc(var(--pico-form-element-spacing-vertical, 0.75rem) * 2 + var(--pico-line-height, 1.5) * 1rem + 2px);
+  box-sizing: border-box;
+  border: 1px solid var(--pico-form-element-border-color, #767676);
+  border-radius: var(--pico-border-radius, 0.25rem);
+  padding: var(--pico-form-element-spacing-vertical, 0.75rem) 0.6em;
+  background-color: var(--pico-form-element-background-color, #fff);
+  cursor: pointer;
+  user-select: none;
+}
+
+.filter-multiselect-trigger:focus {
+  border-color: var(--pico-primary);
+  box-shadow: 0 0 0 2px var(--pico-primary-focus, rgba(124,58,237,0.375));
+  outline: none;
+}
+
+[data-theme="dark"] .filter-multiselect-trigger {
+  background-color: var(--pico-form-element-background-color, #1e1e2e);
+  border-color: var(--pico-form-element-border-color, #4a4a6a);
+}
+
+/* Placeholder text when nothing is selected */
+.filter-multiselect-placeholder {
+  color: var(--pico-muted-color, #6b7280);
+  font-size: 0.95em;
+}
+
+/* Pill wrapper inside the trigger */
+.filter-multiselect-pills {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.25em;
+}
+
+/* Individual selected-value pill inside the trigger */
+.filter-multiselect-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2em;
+  border-radius: 1em;
+  padding: 0.05em 0.45em;
+  font-size: 0.78em;
+  font-weight: 600;
+  white-space: nowrap;
+  line-height: 1.5;
+}
+
+.filter-multiselect-pill-remove {
+  all: unset;
+  cursor: pointer;
+  line-height: 1;
+  font-size: 1.05em;
+  opacity: 0.7;
+}
+
+.filter-multiselect-pill-remove:hover {
+  opacity: 1;
+}
+
+/* Dropdown list */
+.filter-multiselect-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  list-style: none;
+  margin: 0;
+  padding: 0.25em 0;
+  background-color: var(--pico-card-background-color, #fff);
+  border: 1px solid var(--pico-muted-border-color, #d1d5db);
+  border-radius: var(--pico-border-radius, 0.25rem);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  z-index: 100;
+  min-width: 100%;
+}
+
+.filter-multiselect-dropdown[hidden] {
+  display: none;
+}
+
+.filter-multiselect-dropdown li {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.35em 0.75em;
+  cursor: pointer;
+  font-size: 0.9em;
+  color: var(--pico-color, inherit);
+}
+
+.filter-multiselect-dropdown li:hover {
+  background-color: color-mix(in srgb, var(--pico-primary, #7c3aed) 8%, transparent);
+}
+
+/* Checkmark indicator for selected items */
+.filter-multiselect-dropdown li::before {
+  content: '';
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+}
+
+.filter-multiselect-dropdown li[aria-selected="true"]::before {
+  content: '✓';
+  color: var(--pico-primary, #7c3aed);
+  font-weight: 700;
+}
+
+[data-theme="dark"] .filter-multiselect-dropdown {
+  background-color: var(--pico-card-background-color, #1e1e2e);
+  border-color: var(--pico-muted-border-color, #374151);
+}
+
+[data-theme="dark"] .filter-multiselect-dropdown li:hover {
+  background-color: color-mix(in srgb, var(--pico-primary, #a78bfa) 12%, transparent);
+}
+
+[data-theme="dark"] .filter-multiselect-dropdown li[aria-selected="true"]::before {
+  color: var(--pico-primary, #a78bfa);
+}
+
 /* Priority badges — dark theme */
 [data-theme="dark"] .badge.priority-1 {
   background-color: color-mix(in srgb, #ef4444 25%, transparent);

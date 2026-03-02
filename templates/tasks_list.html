@@ -7,25 +7,38 @@
 
 <form method="get" action="/tasks"
       hx-get="/tasks"
-      hx-trigger="change from:select, change from:#tag-hidden-input, keyup changed delay:300ms from:input[name='search']"
+      hx-trigger="change from:#status-hidden-input, change from:#priority-hidden-input, change from:#tag-hidden-input, keyup changed delay:300ms from:input[name='search']"
       hx-target="#content-area"
       hx-select="#content-area"
       hx-swap="outerHTML"
       hx-push-url="true">
   <div class="grid">
-    <select name="status">
-      <option value="">All statuses</option>
-      <option value="open" {% if status_filter.as_deref() == Some("open") %}selected{% endif %}>Open</option>
-      <option value="in_progress" {% if status_filter.as_deref() == Some("in_progress") %}selected{% endif %}>In Progress</option>
-      <option value="done" {% if status_filter.as_deref() == Some("done") %}selected{% endif %}>Done</option>
-      <option value="blocked" {% if status_filter.as_deref() == Some("blocked") %}selected{% endif %}>Blocked</option>
-    </select>
-    <select name="priority">
-      <option value="">All priorities</option>
-      <option value="1" {% if priority_filter.as_deref() == Some("1") %}selected{% endif %}>P1</option>
-      <option value="2" {% if priority_filter.as_deref() == Some("2") %}selected{% endif %}>P2</option>
-      <option value="3" {% if priority_filter.as_deref() == Some("3") %}selected{% endif %}>P3</option>
-    </select>
+    <div class="filter-multiselect" id="status-multiselect">
+      <div class="filter-multiselect-trigger" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
+        <span class="filter-multiselect-pills"></span>
+        <span class="filter-multiselect-placeholder">All statuses</span>
+      </div>
+      <ul class="filter-multiselect-dropdown" role="listbox" aria-multiselectable="true" hidden>
+        <li role="option" data-value="open" data-label="Open" data-badge-class="status-open"><span class="badge status-open">Open</span></li>
+        <li role="option" data-value="in_progress" data-label="In Progress" data-badge-class="status-in_progress"><span class="badge status-in_progress">In Progress</span></li>
+        <li role="option" data-value="done" data-label="Done" data-badge-class="status-done"><span class="badge status-done">Done</span></li>
+        <li role="option" data-value="blocked" data-label="Blocked" data-badge-class="status-blocked"><span class="badge status-blocked">Blocked</span></li>
+      </ul>
+      <input type="hidden" name="status" id="status-hidden-input" value="{{ status_filter.as_deref().unwrap_or_default() }}">
+    </div>
+    <div class="filter-multiselect" id="priority-multiselect">
+      <div class="filter-multiselect-trigger" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
+        <span class="filter-multiselect-pills"></span>
+        <span class="filter-multiselect-placeholder">All priorities</span>
+      </div>
+      <ul class="filter-multiselect-dropdown" role="listbox" aria-multiselectable="true" hidden>
+        <li role="option" data-value="1" data-label="P1" data-badge-class="priority-1"><span class="badge priority-1">P1</span></li>
+        <li role="option" data-value="2" data-label="P2" data-badge-class="priority-2"><span class="badge priority-2">P2</span></li>
+        <li role="option" data-value="3" data-label="P3" data-badge-class="priority-3"><span class="badge priority-3">P3</span></li>
+        <li role="option" data-value="4" data-label="P4" data-badge-class="priority-4"><span class="badge priority-4">P4</span></li>
+      </ul>
+      <input type="hidden" name="priority" id="priority-hidden-input" value="{{ priority_filter.as_deref().unwrap_or_default() }}">
+    </div>
     <div class="tag-multiselect" id="tag-multiselect">
       <div class="tag-multiselect-trigger" id="tag-multiselect-trigger" role="button" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
         <span class="tag-multiselect-pills" id="tag-multiselect-pills">

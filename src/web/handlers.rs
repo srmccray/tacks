@@ -107,12 +107,17 @@ where
 }
 
 /// Query parameters for GET /api/tasks.
+///
+/// `status` and `priority` accept comma-separated values for multi-select OR filtering
+/// (e.g. `status=open,in_progress` or `priority=1,2`).
 #[derive(Debug, Deserialize)]
 pub struct ListTasksQuery {
+    /// Comma-separated status values for multi-select OR filtering.
     #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub status: Option<String>,
-    #[serde(default, deserialize_with = "deserialize_optional_u8")]
-    pub priority: Option<u8>,
+    /// Comma-separated priority values for multi-select OR filtering.
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
+    pub priority: Option<String>,
     #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub tag: Option<String>,
     pub all: Option<bool>,
@@ -232,14 +237,39 @@ fn filter_by_tags(tasks: Vec<Task>, tags: &[String]) -> Vec<Task> {
         .collect()
 }
 
+/// Parse comma-separated priority values into a `Vec<u8>`.
+fn parse_priority_values(s: &Option<String>) -> Vec<u8> {
+    match s.as_deref() {
+        None | Some("") => vec![],
+        Some(v) => v
+            .split(',')
+            .filter_map(|p| p.trim().parse::<u8>().ok())
+            .collect(),
+    }
+}
+
+/// Parse comma-separated status values into a `Vec<String>`.
+fn parse_status_values(s: &Option<String>) -> Vec<String> {
+    match s.as_deref() {
+        None | Some("") => vec![],
+        Some(v) => v
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect(),
+    }
+}
+
 /// GET /api/tasks — List tasks with optional filters (200).
+///
+/// `status` and `priority` accept comma-separated values for multi-select OR filtering.
 pub async fn api_list_tasks(
     State(state): State<AppState>,
     Query(query): Query<ListTasksQuery>,
 ) -> Result<impl IntoResponse, AppError> {
     let show_all = query.all.unwrap_or(false);
-    let status_filter = query.status.clone();
-    let priority_filter = query.priority;
+    let status_values = parse_status_values(&query.status);
+    let priority_values = parse_priority_values(&query.priority);
     let tag_param = query.tag.clone();
     let parent_filter = query.parent.clone();
     let search_filter = query.search.clone();
@@ -256,17 +286,43 @@ pub async fn api_list_tasks(
     let multi_tags = if tags.len() > 1 { tags } else { vec![] };
 
     let db = state.db.clone();
-    let tasks = tokio::task::spawn_blocking(move || {
+    let tasks = tokio::task::spawn_blocking(move || -> Result<Vec<Task>, String> {
         let db = db.lock().unwrap();
-        let tasks = db.list_tasks(
-            show_all,
-            status_filter.as_deref(),
-            priority_filter,
+        // For single status/priority, pass directly to DB for efficiency.
+        // For multi-value, load without that filter then post-filter in Rust.
+        let (db_status, db_priority) = match (status_values.len(), priority_values.len()) {
+            (0 | 1, 0 | 1) => (
+                status_values.first().map(|s| s.as_str()),
+                priority_values.first().copied(),
+            ),
+            _ => (None, None),
+        };
+        let mut tasks = db.list_tasks(
+            show_all || !status_values.is_empty(),
+            db_status,
+            db_priority,
             db_tag_filter.as_deref(),
             parent_filter.as_deref(),
             search_filter.as_deref(),
         )?;
-        Ok(filter_by_tags(tasks, &multi_tags))
+        // Post-filter for multi-value OR semantics
+        if status_values.len() > 1 {
+            let status_strs: Vec<&str> = status_values.iter().map(|s| s.as_str()).collect();
+            tasks.retain(|t| {
+                let s = match t.status {
+                    crate::models::Status::Open => "open",
+                    crate::models::Status::InProgress => "in_progress",
+                    crate::models::Status::Done => "done",
+                    crate::models::Status::Blocked => "blocked",
+                };
+                status_strs.contains(&s)
+            });
+        }
+        if priority_values.len() > 1 {
+            tasks.retain(|t| priority_values.contains(&t.priority));
+        }
+        let tasks = filter_by_tags(tasks, &multi_tags);
+        Ok(tasks)
     })
     .await
     .map_err(|e| AppError::Internal(e.to_string()))?
@@ -841,7 +897,7 @@ struct TaskNewTemplate;
 /// Build a query string from current filter params for HTMX polling.
 fn build_poll_query(
     status: &Option<String>,
-    priority: Option<u8>,
+    priority: &Option<String>,
     tag: &Option<String>,
     search: &Option<String>,
 ) -> String {
@@ -874,9 +930,9 @@ pub async fn task_list(
         || params.priority.is_some()
         || params.tag.is_some()
         || params.search.is_some();
+    let status_values = parse_status_values(&params.status);
+    let priority_values = parse_priority_values(&params.priority);
     let show_all = has_filter || params.all.unwrap_or(false);
-    let status_filter = params.status.clone();
-    let priority_filter = params.priority;
     let tag_param = params.tag.clone();
     let search_filter = params.search.clone();
 
@@ -897,14 +953,39 @@ pub async fn task_list(
     let (task_rows, all_tags) =
         tokio::task::spawn_blocking(move || -> Result<(Vec<TaskRow>, Vec<String>), String> {
             let db = db.lock().unwrap();
-            let tasks = db.list_tasks(
+            // For single status/priority, pass directly to DB for efficiency.
+            // For multi-value, load without that filter then post-filter in Rust.
+            let (db_status, db_priority) = match (status_values.len(), priority_values.len()) {
+                (0 | 1, 0 | 1) => (
+                    status_values.first().map(|s| s.as_str()),
+                    priority_values.first().copied(),
+                ),
+                _ => (None, None),
+            };
+            let mut tasks = db.list_tasks(
                 show_all,
-                status_filter.as_deref(),
-                priority_filter,
+                db_status,
+                db_priority,
                 db_tag_filter.as_deref(),
                 None,
                 search_filter.as_deref(),
             )?;
+            // Post-filter for multi-value OR semantics
+            if status_values.len() > 1 {
+                let status_strs: Vec<&str> = status_values.iter().map(|s| s.as_str()).collect();
+                tasks.retain(|t| {
+                    let s = match t.status {
+                        crate::models::Status::Open => "open",
+                        crate::models::Status::InProgress => "in_progress",
+                        crate::models::Status::Done => "done",
+                        crate::models::Status::Blocked => "blocked",
+                    };
+                    status_strs.contains(&s)
+                });
+            }
+            if priority_values.len() > 1 {
+                tasks.retain(|t| priority_values.contains(&t.priority));
+            }
             let tasks = filter_by_tags(tasks, &multi_tags);
             // Batch-load parent epics (avoids N+1: one lookup per unique parent_id)
             let parent_ids: std::collections::HashSet<String> =
@@ -926,12 +1007,17 @@ pub async fn task_list(
         .unwrap()
         .unwrap_or_else(|_| (vec![], vec![]));
 
-    let poll_query = build_poll_query(&params.status, params.priority, &params.tag, &params.search);
+    let poll_query = build_poll_query(
+        &params.status,
+        &params.priority,
+        &params.tag,
+        &params.search,
+    );
 
     render_template(TaskListTemplate {
         tasks: task_rows,
         status_filter: params.status,
-        priority_filter: params.priority.map(|p| p.to_string()),
+        priority_filter: params.priority,
         tag_filter: params.tag,
         selected_tags,
         all_tags,
