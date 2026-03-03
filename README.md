@@ -101,7 +101,7 @@ Sortable table with inline editing — click any field to edit in place.
 
 Tacks ships a Claude Code plugin that wires `tk` commands into slash commands and session hooks.
 
-### Install from marketplace (when available)
+### Install from marketplace
 
 ```bash
 /plugin marketplace add srmccray/tacks
