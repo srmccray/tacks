@@ -331,6 +331,13 @@
   color: #111827;
 }
 
+/* Board card shortcut tooltips: show below to avoid overlapping column headings */
+.board-card[data-shortcut]:hover::after,
+.board-card[data-shortcut]:focus-visible::after {
+  bottom: auto;
+  top: calc(100% + 6px);
+}
+
 /* Timestamp column: never wrap */
 .col-updated {
   white-space: nowrap;
@@ -1075,7 +1082,8 @@ a.view-toggle-btn:hover {
   background-color: color-mix(in srgb, var(--pico-primary, #7c3aed) 8%, transparent);
   border-radius: var(--pico-border-radius, 0.25rem);
   outline: 2px dashed color-mix(in srgb, var(--pico-primary, #7c3aed) 50%, transparent);
-  outline-offset: -2px;
+  outline-offset: 4px;
+  padding: 0.5rem;
 }
 
 [data-theme="dark"] .board-column.drag-over {
