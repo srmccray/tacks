@@ -331,9 +331,11 @@
   color: #111827;
 }
 
-/* Board card shortcut tooltips: show below to avoid overlapping column headings */
+/* Shortcut tooltips near top of page: show below to avoid viewport clipping */
 .board-card[data-shortcut]:hover::after,
-.board-card[data-shortcut]:focus-visible::after {
+.board-card[data-shortcut]:focus-visible::after,
+.new-issue-btn[data-shortcut]:hover::after,
+.new-issue-btn[data-shortcut]:focus-visible::after {
   bottom: auto;
   top: calc(100% + 6px);
 }
