@@ -12,11 +12,6 @@ use crate::models::{Comment, Task, validate_close_reason};
 use crate::web::AppState;
 use crate::web::errors::AppError;
 
-/// Template for the index/home page.
-#[derive(Template)]
-#[template(path = "index.html")]
-struct IndexTemplate;
-
 /// Render an askama template into an axum HTML response.
 fn render_template<T: Template>(template: T) -> Response {
     match template.render() {
@@ -30,8 +25,8 @@ fn render_template<T: Template>(template: T) -> Response {
 }
 
 /// Index page handler — renders the home template.
-pub async fn index() -> Response {
-    render_template(IndexTemplate)
+pub async fn index() -> Redirect {
+    Redirect::permanent("/tasks")
 }
 
 // ---------------------------------------------------------------------------
