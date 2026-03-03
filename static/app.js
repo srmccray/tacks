@@ -1288,6 +1288,13 @@
       input.addEventListener('change', function () {
         commitEdit(el, field, input.value);
       });
+      // Close on blur (handles click-away or same-value selection)
+      input.addEventListener('blur', function () {
+        var state = editingState.get(el);
+        if (state && !state.saved) {
+          cancelEdit(el);
+        }
+      });
       // Escape: cancel edit (preventDefault stops native <dialog> close)
       input.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') {
