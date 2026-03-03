@@ -64,6 +64,33 @@ tk close <id> -c "Done"              # close with comment
 
 All commands support `--json` for machine-readable output.
 
+## Claude Code Plugin
+
+Tacks ships a Claude Code plugin that wires `tk` commands into slash commands and session hooks.
+
+### Install from marketplace (when available)
+
+```bash
+/plugin marketplace add srmccray/tacks
+/plugin install tacks
+```
+
+### Manual install from local clone
+
+```bash
+git clone https://github.com/srmccray/tacks.git
+claude plugin add ./tacks/claude-plugin
+```
+
+**Prerequisite**: the `tk` binary must be installed and on your `PATH` (see Install section above).
+
+### What the plugin provides
+
+- **Slash commands** for all `tk` operations: `/tacks:create`, `/tacks:list`, `/tacks:ready`, `/tacks:show`, `/tacks:update`, `/tacks:close`, `/tacks:dep`, `/tacks:comment`, `/tacks:children`, `/tacks:epic`, `/tacks:blocked`, `/tacks:stats`, `/tacks:prime`, `/tacks:init`
+- **SessionStart hook** that auto-loads backlog context via `tk prime` — every session starts with full situational awareness
+- **PreCompact hook** that re-runs `tk prime` before context compaction to preserve backlog state
+- **Task agent** (`@task-agent`) for autonomous work discovery: finds ready tasks, claims them, executes, files discoveries, and closes on completion
+
 ## Designed for agents
 
 Tacks is built to be consumed by AI coding agents like Claude Code:
