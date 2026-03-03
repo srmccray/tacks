@@ -1,7 +1,7 @@
 {
   "name": "tacks",
   "description": "Lightweight task manager for AI coding agents. Manage tasks, track epics, and maintain backlog context with simple CLI commands.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "author": {
     "name": "Stephen McCray",
     "url": "https://github.com/srmccray"

@@ -7,7 +7,7 @@
       "name": "tacks",
       "source": "./claude-plugin",
       "description": "Task management with slash commands, session hooks, and autonomous task agent",
-      "version": "0.2.0"
+      "version": "0.2.1"
     }
   ]
 }
