@@ -858,6 +858,7 @@ a.view-toggle-btn:hover {
 /* Hint cursor on editable elements */
 [data-editable]:not(.editing) {
   cursor: pointer;
+  white-space: nowrap;
 }
 
 [data-editable]:not(.editing):hover {
@@ -1050,6 +1051,11 @@ a.view-toggle-btn:hover {
 .board-card.dragging {
   opacity: 0.4;
   cursor: grabbing;
+}
+
+/* Space between board filters and columns */
+#board-columns {
+  margin-top: 0.75rem;
 }
 
 /* Board column heading: space below so drag-over highlight starts clear of the title */
