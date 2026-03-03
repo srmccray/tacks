@@ -531,6 +531,9 @@ nav.nav-tabs ul:last-child li a.nav-active {
 .task-description {
   margin-bottom: 1.25rem;
   color: var(--pico-color, inherit);
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 /* Epic badge — small linked pill used in list/board/detail views */
@@ -867,6 +870,10 @@ a.view-toggle-btn:hover {
 /* Hint cursor on editable elements */
 [data-editable]:not(.editing) {
   cursor: pointer;
+}
+
+/* Prevent pencil icon from wrapping on short-content cells (badges) */
+td[data-editable]:not(.editing) {
   white-space: nowrap;
 }
 
@@ -1066,6 +1073,30 @@ a.view-toggle-btn:hover {
   font-size: 1.25rem;
   line-height: 1;
   opacity: 0.7;
+}
+
+/* Compact form: tighter spacing for modal forms */
+.compact-form input,
+.compact-form textarea,
+.compact-form select {
+  margin-bottom: 0.5rem;
+}
+
+.compact-form .grid {
+  row-gap: 0;
+}
+
+/* Modal footer: side-by-side buttons */
+.modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+}
+
+.modal-actions button {
+  width: auto;
+  margin-bottom: 0;
 }
 /* --- Board drag-and-drop --- */
 

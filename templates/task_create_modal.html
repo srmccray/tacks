@@ -4,54 +4,39 @@
     <button aria-label="Close" rel="prev" onclick="document.getElementById('task-modal').close()"></button>
   </header>
 
-  <form id="create-task-form">
-    <label for="create-title">title
-      <input type="text" id="create-title" name="title" placeholder="Task title" required autofocus>
-    </label>
+  <form id="create-task-form" class="compact-form">
+    <input type="text" id="create-title" name="title" placeholder="Title" required autofocus>
 
-    <label for="create-description">description
-      <textarea id="create-description" name="description" placeholder="Task description (optional)"></textarea>
-    </label>
+    <textarea id="create-description" name="description" placeholder="Description (optional)" rows="3"></textarea>
 
     <div class="grid">
-      <label for="create-priority">priority
-        <select id="create-priority" name="priority">
-          <option value="1">P1 — Critical</option>
-          <option value="2" selected>P2 — Normal</option>
-          <option value="3">P3 — Low</option>
-          <option value="4">P4 — Trivial</option>
-        </select>
-      </label>
-
-      <label for="create-status">status
-        <select id="create-status" name="status">
-          <option value="open" selected>Open</option>
-          <option value="in_progress">In Progress</option>
-          <option value="blocked">Blocked</option>
-        </select>
-      </label>
-    </div>
-
-    <div class="grid">
-      <label for="create-tags">tags
-        <input type="text" id="create-tags" name="tags" placeholder="comma-separated tags">
-      </label>
-
-      <label for="create-assignee">assignee
-        <input type="text" id="create-assignee" name="assignee" placeholder="Assignee (optional)">
-      </label>
-    </div>
-
-    <label for="create-parent">parent
-      <select id="create-parent" name="parent_id">
-        <option value="">— none —</option>
-        {% for epic in epics %}
-        <option value="{{ epic.id }}">{{ epic.id }}: {{ epic.title }}</option>
-        {% endfor %}
+      <select id="create-priority" name="priority" aria-label="Priority">
+        <option value="1">P1 — Critical</option>
+        <option value="2" selected>P2 — Normal</option>
+        <option value="3">P3 — Low</option>
+        <option value="4">P4 — Trivial</option>
       </select>
-    </label>
 
-    <footer>
+      <select id="create-status" name="status" aria-label="Status">
+        <option value="open" selected>Open</option>
+        <option value="in_progress">In Progress</option>
+        <option value="blocked">Blocked</option>
+      </select>
+    </div>
+
+    <div class="grid">
+      <input type="text" id="create-tags" name="tags" placeholder="Tags (comma-separated)" aria-label="Tags">
+      <input type="text" id="create-assignee" name="assignee" placeholder="Assignee (optional)" aria-label="Assignee">
+    </div>
+
+    <select id="create-parent" name="parent_id" aria-label="Parent epic">
+      <option value="">No parent epic</option>
+      {% for epic in epics %}
+      <option value="{{ epic.id }}">{{ epic.id }}: {{ epic.title }}</option>
+      {% endfor %}
+    </select>
+
+    <footer class="modal-actions">
       <button type="button" class="secondary outline" onclick="document.getElementById('task-modal').close()">Cancel</button>
       <button type="submit">Create Issue</button>
     </footer>
