@@ -53,7 +53,7 @@
   <div class="board-column" data-status="open">
     <h2>Open <span class="column-count">({{ open_tasks.len() }})</span></h2>
     {% for row in open_tasks %}
-    <article class="board-card" draggable="true" data-task-id="{{ row.task.id }}" tabindex="0">
+    <article class="board-card" draggable="true" data-task-id="{{ row.task.id }}" tabindex="0" data-shortcut="Shift+→ to move right">
       <div class="board-card-header">
         <a href="/tasks/{{ row.task.id }}"
            hx-get="/tasks/{{ row.task.id }}"
@@ -70,7 +70,7 @@
   <div class="board-column" data-status="in_progress">
     <h2>In Progress <span class="column-count">({{ in_progress_tasks.len() }})</span></h2>
     {% for row in in_progress_tasks %}
-    <article class="board-card" draggable="true" data-task-id="{{ row.task.id }}" tabindex="0">
+    <article class="board-card" draggable="true" data-task-id="{{ row.task.id }}" tabindex="0" data-shortcut="Shift+←/→ to move">
       <div class="board-card-header">
         <a href="/tasks/{{ row.task.id }}"
            hx-get="/tasks/{{ row.task.id }}"
@@ -104,7 +104,7 @@
   <div class="board-column" data-status="done">
     <h2>Done <span class="column-count">({{ done_tasks.len() }})</span></h2>
     {% for row in done_tasks %}
-    <article class="board-card" draggable="true" data-task-id="{{ row.task.id }}" tabindex="0">
+    <article class="board-card" draggable="true" data-task-id="{{ row.task.id }}" tabindex="0" data-shortcut="Shift+← to move left">
       <div class="board-card-header">
         <a href="/tasks/{{ row.task.id }}"
            hx-get="/tasks/{{ row.task.id }}"

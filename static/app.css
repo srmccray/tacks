@@ -278,6 +278,59 @@
   color: #374151;
 }
 
+/* Subtask count badge — shown next to a parent task's title in the task list */
+.subtask-count {
+  display: inline-block;
+  font-size: 0.7em;
+  font-family: monospace;
+  font-weight: 600;
+  color: var(--pico-muted-color, #6b7280);
+  background-color: color-mix(in srgb, var(--pico-muted-color, #6b7280) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--pico-muted-color, #6b7280) 25%, transparent);
+  border-radius: 1em;
+  padding: 0.05em 0.45em;
+  vertical-align: middle;
+  white-space: nowrap;
+  margin-left: 0.2em;
+}
+
+[data-theme="dark"] .subtask-count {
+  color: var(--pico-muted-color, #9ca3af);
+  background-color: color-mix(in srgb, var(--pico-muted-color, #9ca3af) 15%, transparent);
+  border-color: color-mix(in srgb, var(--pico-muted-color, #9ca3af) 30%, transparent);
+}
+
+/* Keyboard shortcut tooltip — shown on hover via [data-shortcut] attribute */
+/* Uses CSS ::after to render the shortcut hint without a tooltip library */
+[data-shortcut] {
+  position: relative;
+}
+
+[data-shortcut]:hover::after,
+[data-shortcut]:focus-visible::after {
+  content: attr(data-shortcut);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--pico-contrast-background, #1a1a2e);
+  color: var(--pico-contrast-inverse, #f8f8f2);
+  font-size: 0.7rem;
+  font-weight: 500;
+  padding: 0.2em 0.55em;
+  border-radius: var(--pico-border-radius, 0.25rem);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 300;
+  opacity: 0.92;
+}
+
+[data-theme="dark"] [data-shortcut]:hover::after,
+[data-theme="dark"] [data-shortcut]:focus-visible::after {
+  background-color: #e5e7eb;
+  color: #111827;
+}
+
 /* Timestamp column: never wrap */
 .col-updated {
   white-space: nowrap;
@@ -505,6 +558,54 @@ nav.nav-tabs ul:last-child li a.nav-active {
 
 [data-theme="dark"] .meta-sep {
   color: var(--pico-muted-border-color, #374151);
+}
+
+/* Breadcrumb navigation — used on epic detail page */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3em;
+  font-size: 0.875rem;
+  color: var(--pico-muted-color, #6b7280);
+  margin-bottom: 1rem;
+  list-style: none;
+  padding: 0;
+}
+
+.breadcrumb li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+}
+
+.breadcrumb li + li::before {
+  content: '›';
+  color: var(--pico-muted-border-color, #d1d5db);
+  font-size: 1em;
+  user-select: none;
+}
+
+.breadcrumb a {
+  color: var(--pico-primary, #7c3aed);
+  text-decoration: none;
+}
+
+.breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+.breadcrumb .breadcrumb-current {
+  color: var(--pico-color, inherit);
+  font-weight: 500;
+}
+
+[data-theme="dark"] .breadcrumb li + li::before {
+  color: var(--pico-muted-border-color, #374151);
+}
+
+[data-theme="dark"] .breadcrumb a {
+  color: var(--pico-primary, #a78bfa);
 }
 
 /* Epic detail: divider between description and view toggle */

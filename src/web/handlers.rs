@@ -745,27 +745,39 @@ pub async fn api_poll(State(state): State<AppState>) -> Response {
 // HTML view handlers
 // ---------------------------------------------------------------------------
 
-/// A task row enriched with optional parent info for list/board views.
+/// A task row enriched with optional parent info and child counts for list/board views.
 struct TaskRow {
     task: Task,
     /// Parent epic ID, if this task is a subtask.
     parent_id: Option<String>,
     /// Parent epic title, if this task is a subtask.
     parent_title: Option<String>,
+    /// Number of done subtasks (0 if this task has no children).
+    children_done: usize,
+    /// Total number of subtasks (0 if this task has no children).
+    children_total: usize,
 }
 
 impl TaskRow {
-    /// Build a `TaskRow` from a task, looking up parent title from the provided map.
-    fn from_task(task: Task, parents: &std::collections::HashMap<String, Task>) -> Self {
+    /// Build a `TaskRow` from a task, looking up parent title from the provided map
+    /// and child counts from the provided counts map.
+    fn from_task(
+        task: Task,
+        parents: &std::collections::HashMap<String, Task>,
+        child_counts: &std::collections::HashMap<String, (usize, usize)>,
+    ) -> Self {
         let parent_id = task.parent_id.clone();
         let parent_title = parent_id
             .as_deref()
             .and_then(|pid| parents.get(pid))
             .map(|p| p.title.clone());
+        let (children_done, children_total) = child_counts.get(&task.id).copied().unwrap_or((0, 0));
         TaskRow {
             task,
             parent_id,
             parent_title,
+            children_done,
+            children_total,
         }
     }
 }
@@ -779,6 +791,29 @@ fn fetch_parent_map(
     for id in ids {
         if let Some(t) = db.get_task(&id)? {
             map.insert(id, t);
+        }
+    }
+    Ok(map)
+}
+
+/// Batch-fetch child counts for a list of task IDs.
+///
+/// Returns a map of `task_id -> (done_count, total_count)` for tasks that have
+/// at least one child.  Tasks with no children are absent from the map (callers
+/// should default to `(0, 0)`).
+fn fetch_child_counts(
+    db: &crate::db::Database,
+    task_ids: &[String],
+) -> Result<std::collections::HashMap<String, (usize, usize)>, String> {
+    let mut map = std::collections::HashMap::new();
+    for id in task_ids {
+        let children = db.get_children(id)?;
+        if !children.is_empty() {
+            let done = children
+                .iter()
+                .filter(|c| matches!(c.status, crate::models::Status::Done))
+                .count();
+            map.insert(id.clone(), (done, children.len()));
         }
     }
     Ok(map)
@@ -1004,9 +1039,12 @@ pub async fn task_list(
             let parent_ids: std::collections::HashSet<String> =
                 tasks.iter().filter_map(|t| t.parent_id.clone()).collect();
             let parents = fetch_parent_map(&db, parent_ids.into_iter())?;
+            // Batch-fetch child counts so we can show subtask progress on parent tasks
+            let task_ids: Vec<String> = tasks.iter().map(|t| t.id.clone()).collect();
+            let child_counts = fetch_child_counts(&db, &task_ids)?;
             let rows: Vec<TaskRow> = tasks
                 .into_iter()
-                .map(|t| TaskRow::from_task(t, &parents))
+                .map(|t| TaskRow::from_task(t, &parents, &child_counts))
                 .collect();
             // Fetch all tags for the dropdown
             let all_tags: Vec<String> = db
@@ -1313,10 +1351,12 @@ pub async fn board(State(state): State<AppState>, Query(query): Query<BoardQuery
             all_tasks_iter.filter_map(|t| t.parent_id.clone()).collect();
         let parents = fetch_parent_map(&db, parent_ids.into_iter())?;
 
+        // Board cards don't show child counts — pass empty map so from_task defaults to (0, 0)
+        let empty_child_counts = std::collections::HashMap::new();
         let to_rows = |tasks: Vec<Task>| -> Vec<TaskRow> {
             tasks
                 .into_iter()
-                .map(|t| TaskRow::from_task(t, &parents))
+                .map(|t| TaskRow::from_task(t, &parents, &empty_child_counts))
                 .collect()
         };
 

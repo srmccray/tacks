@@ -336,6 +336,51 @@
     bodyObserver.observe(document.body, { childList: true });
   });
 
+  // --- URL hash for task modals ---
+  // When a task modal opens, push #task-<id> to the URL.
+  // When it closes, remove the hash.
+  // On page load, auto-open the modal if a matching hash is present.
+
+  var TASK_HASH_PREFIX = '#task-';
+
+  function getHashTaskId() {
+    var hash = window.location.hash;
+    if (hash && hash.startsWith(TASK_HASH_PREFIX)) {
+      return hash.slice(TASK_HASH_PREFIX.length);
+    }
+    return null;
+  }
+
+  function pushTaskHash(taskId) {
+    if (taskId) {
+      history.pushState(null, '', TASK_HASH_PREFIX + taskId);
+    }
+  }
+
+  function clearTaskHash() {
+    // Only clear if we have a task hash — avoids polluting history with no-op pushes
+    if (window.location.hash && window.location.hash.startsWith(TASK_HASH_PREFIX)) {
+      history.pushState(null, '', window.location.pathname + window.location.search);
+    }
+  }
+
+  // Extract task ID from modal content — look for a data-task-id attribute or
+  // a canonical link pattern like /tasks/<id> inside the modal.
+  function extractModalTaskId() {
+    var dlg = document.getElementById('task-modal');
+    if (!dlg) return null;
+    // Look for data-task-id on any element inside (article header, editable fields, etc.)
+    var el = dlg.querySelector('[data-task-id]');
+    if (el) return el.getAttribute('data-task-id');
+    // Fallback: look for a /tasks/<id> link inside the modal
+    var link = dlg.querySelector('a[href^="/tasks/"]');
+    if (link) {
+      var m = link.getAttribute('href').match(/^\/tasks\/(tk-[^/?#]+)/);
+      if (m) return m[1];
+    }
+    return null;
+  }
+
   // Open the modal after HTMX swaps content into it
   document.addEventListener('htmx:afterSwap', function (e) {
     if (e.detail.target.id === 'task-modal') {
@@ -343,6 +388,41 @@
       if (dlg && !dlg.open) {
         dlg.showModal();
       }
+      // Push URL hash after the modal content is in the DOM
+      var taskId = extractModalTaskId();
+      if (taskId) {
+        pushTaskHash(taskId);
+      }
+    }
+  });
+
+  // Clear URL hash when the task modal closes
+  document.addEventListener('close', function (e) {
+    if (e.target && e.target.id === 'task-modal') {
+      clearTaskHash();
+    }
+  }, true); // capture phase so we catch the native <dialog> close event
+
+  // On back/forward navigation, open or close modal to match URL hash
+  window.addEventListener('popstate', function () {
+    var taskId = getHashTaskId();
+    var dlg = document.getElementById('task-modal');
+    if (taskId) {
+      if (dlg && !dlg.open) {
+        htmx.ajax('GET', '/tasks/' + taskId, { target: '#task-modal', swap: 'innerHTML' });
+      }
+    } else {
+      if (dlg && dlg.open) {
+        dlg.close();
+      }
+    }
+  });
+
+  // On page load: if there is a task hash, auto-open the modal
+  document.addEventListener('DOMContentLoaded', function () {
+    var taskId = getHashTaskId();
+    if (taskId) {
+      htmx.ajax('GET', '/tasks/' + taskId, { target: '#task-modal', swap: 'innerHTML' });
     }
   });
 

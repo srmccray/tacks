@@ -12,7 +12,19 @@
      aria-live="polite"
      aria-atomic="false">
 
-<p><a href="/epics">&#8592; Back to epics</a></p>
+<nav aria-label="Breadcrumb">
+  <ol class="breadcrumb">
+    <li><a href="/epics">Epics</a></li>
+    <li><span class="breadcrumb-current">{{ task.title }}</span></li>
+    <li>
+      {% if view == "list" %}
+      <span class="breadcrumb-current">List</span>
+      {% else %}
+      <span class="breadcrumb-current">Board</span>
+      {% endif %}
+    </li>
+  </ol>
+</nav>
 
 <h1>{{ task.title }}</h1>
 

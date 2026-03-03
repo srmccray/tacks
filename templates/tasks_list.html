@@ -69,9 +69,9 @@
       </ul>
       <input type="hidden" name="tag" value="{{ tag_filter.as_deref().unwrap_or_default() }}" id="tag-hidden-input">
     </div>
-    <div role="search">
+    <div role="search" style="position:relative">
       <label for="search-input" class="sr-only">Search tasks by title</label>
-      <input type="text" id="search-input" name="search" placeholder="Search titles..." value="{{ search_filter.as_deref().unwrap_or_default() }}" aria-label="Search tasks by title">
+      <input type="text" id="search-input" name="search" placeholder="Search titles..." value="{{ search_filter.as_deref().unwrap_or_default() }}" aria-label="Search tasks by title" data-shortcut="/ to focus">
     </div>
     <noscript><button type="submit">Filter</button></noscript>
   </div>
@@ -114,6 +114,9 @@
              hx-swap="innerHTML">{{ row.task.id }}</a></td>
       <td>
         <span data-editable data-field="title" data-task-id="{{ row.task.id }}">{{ row.task.title }}</span>
+        {% if row.children_total > 0 %}
+        <span class="subtask-count" title="{{ row.children_done }} of {{ row.children_total }} subtasks done">{{ row.children_done }}/{{ row.children_total }}</span>
+        {% endif %}
         {% if let (Some(pid), Some(ptitle)) = (row.parent_id.as_deref(), row.parent_title.as_deref()) %}
         <a href="/epics/{{ pid }}" class="epic-badge">{{ pid }}: {{ ptitle }}</a>
         {% endif %}

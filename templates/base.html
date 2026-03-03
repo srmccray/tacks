@@ -26,6 +26,7 @@
             <li><a id="nav-epics" href="/epics" hx-get="/epics" hx-target="#main" hx-select="#main" hx-swap="outerHTML scroll:top" hx-push-url="true">Epics</a></li>
             <li>
                 <button class="outline new-issue-btn"
+                    data-shortcut="n"
                     hx-get="/tasks/new/modal"
                     hx-target="#task-modal"
                     hx-swap="innerHTML"
