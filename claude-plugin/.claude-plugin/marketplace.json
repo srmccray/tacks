@@ -1,13 +1,13 @@
 {
   "name": "tacks-marketplace",
   "description": "Local marketplace for tacks plugin development",
-  "owner": {"name": "Steve McCray"},
+  "owner": {"name": "Stephen McCray"},
   "plugins": [
     {
       "name": "tacks",
       "source": "./claude-plugin",
       "description": "Lightweight task manager for AI coding agents",
-      "version": "0.1.1"
+      "version": "0.2.0"
     }
   ]
 }

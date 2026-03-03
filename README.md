@@ -61,8 +61,41 @@ tk close <id> -c "Done"              # close with comment
 | `tk blocked` | List tasks blocked by open dependencies |
 | `tk stats` | Backlog overview (`--oneline` for compact output) |
 | `tk prime` | AI context output: stats + in-progress + ready queue |
+| `tk serve` | Start web UI server (`--port` to set port, default 3000) |
 
 All commands support `--json` for machine-readable output.
+
+## Web UI
+
+Tacks includes a built-in web interface. Start it with:
+
+```bash
+tk serve              # http://localhost:3000
+tk serve --port 8080  # custom port
+```
+
+### Board view
+
+Kanban board with drag-and-drop status changes, column counts, and multi-select filters.
+
+![Board view](docs/images/board.png)
+
+### Task list
+
+Sortable table with inline editing — click any field to edit in place.
+
+![Task list](docs/images/list.png)
+
+### Features
+
+- **Kanban board** with drag-and-drop between status columns
+- **Inline editing** on both board and list views
+- **Multi-select filters** for status, priority, epic, and tags
+- **Dark mode** by default
+- **Keyboard shortcuts** — press `?` for the full list
+- **Live polling** — changes from CLI or other sessions appear automatically
+- **Epic detail pages** with subtask progress and board view
+- **Responsive layout** for different screen sizes
 
 ## Claude Code Plugin
 
@@ -72,14 +105,21 @@ Tacks ships a Claude Code plugin that wires `tk` commands into slash commands an
 
 ```bash
 /plugin marketplace add srmccray/tacks
-/plugin install tacks
+/plugin install tacks@tacks-marketplace
 ```
 
 ### Manual install from local clone
 
 ```bash
 git clone https://github.com/srmccray/tacks.git
-claude plugin add ./tacks/claude-plugin
+cd tacks
+
+# Option 1: Session-scoped (for testing)
+claude --plugin-dir ./claude-plugin
+
+# Option 2: Persistent install
+/plugin marketplace add ./claude-plugin
+/plugin install tacks@tacks-marketplace
 ```
 
 **Prerequisite**: the `tk` binary must be installed and on your `PATH` (see Install section above).
