@@ -44,7 +44,7 @@
     {%- if task.priority == 1 -%}▲ P1{%- else if task.priority == 2 -%}▬ P2{%- else if task.priority == 3 -%}▽ P3{%- else -%}· P4{%- endif -%}
   </span></span>
   <span class="meta-sep">·</span>
-  <span class="meta-item"><span class="meta-label">Progress</span> <span class="progress-done">{{ children_done }}</span>/<span class="progress-wip">{{ children_in_progress }}</span>/<span class="progress-open">{{ children_open }}</span></span>
+  <span class="meta-item"><span class="meta-label">Progress</span> <span class="progress-done">{{ children_done }}</span>/<span class="progress-wip">{{ children_in_progress }}</span>/<span class="progress-open">{{ children_open }}</span> <span class="progress-total">({{ children_total }})</span></span>
   {% if let Some(assignee) = task.assignee.as_deref() %}
   <span class="meta-sep">·</span>
   <span class="meta-item"><span class="meta-label">Assignee</span> {{ assignee }}</span>

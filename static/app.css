@@ -1572,3 +1572,6 @@ a.view-toggle-btn:focus-visible {
 [data-theme="dark"] .progress-open {
   color: var(--pico-muted-color);
 }
+.progress-total {
+  color: var(--pico-muted-color);
+}
