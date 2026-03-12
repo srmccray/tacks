@@ -118,6 +118,9 @@ enum Commands {
         /// Working notes (overwrites previous value)
         #[arg(long)]
         notes: Option<String>,
+        /// Move task under a parent (reparent). Use "none" to promote to top-level.
+        #[arg(long)]
+        parent: Option<String>,
     },
     /// Close a task
     Close {
@@ -237,6 +240,7 @@ fn main() {
             add_tags,
             remove_tags,
             notes,
+            parent,
         } => commands::update::run(
             &db_path,
             &id,
@@ -249,6 +253,7 @@ fn main() {
             add_tags.as_deref(),
             remove_tags.as_deref(),
             notes.as_deref(),
+            parent.as_deref(),
             cli.json,
         ),
         Commands::Close {

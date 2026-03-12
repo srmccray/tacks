@@ -15,6 +15,7 @@ pub fn run(
     add_tags: Option<&str>,
     remove_tags: Option<&str>,
     notes: Option<&str>,
+    parent: Option<&str>,
     json: bool,
 ) -> Result<(), String> {
     let db = Database::open(db_path)?;
@@ -28,7 +29,19 @@ pub fn run(
         assignee
     };
 
-    db.update_task(
+    // Convert --parent flag to the two-level Option:
+    // --parent none    → Some(None)     (clear parent, promote to top-level)
+    // --parent <id>    → Some(Some(id)) (reparent under <id>)
+    // (not provided)   → None           (no change)
+    let new_parent: Option<Option<&str>> = parent.map(|p| {
+        if p.eq_ignore_ascii_case("none") {
+            None
+        } else {
+            Some(p)
+        }
+    });
+
+    db.update_task_with_parent(
         id,
         title,
         priority,
@@ -37,6 +50,7 @@ pub fn run(
         effective_assignee,
         None,
         notes,
+        new_parent,
     )?;
 
     // Handle tag changes

@@ -24,7 +24,7 @@ src/
     list.rs         # tk list [-a] [-s status] [-p pri] [-t tag] [--parent id]
     ready.rs        # tk ready [--limit N]
     show.rs         # tk show <id> (includes blockers, dependents, notes, close_reason)
-    update.rs       # tk update <id> [fields...] [--claim] [--notes text]
+    update.rs       # tk update <id> [fields...] [--claim] [--notes text] [--parent id|none]
     close.rs        # tk close <id> [-c comment] [-r reason] [--force]
     dep.rs          # tk dep add|remove <child> <parent>
     comment.rs      # tk comment <id> <body>
@@ -88,6 +88,8 @@ tk ready --limit 1                # Next task for agent to pick
 tk show <id>                      # Task details + blockers + dependents
 tk update <id> --claim            # Claim task (in_progress + assignee)
 tk update <id> --notes "context"  # Set working notes (overwrites)
+tk update <id> --parent <epic-id> # Reparent task under an epic/parent
+tk update <id> --parent none      # Promote subtask to top-level task
 tk close <id> -c "Done"           # Close with comment
 tk close <id> -r duplicate        # Close with reason (done/duplicate/absorbed/stale/superseded)
 tk close <id> --force             # Close even with open subtasks

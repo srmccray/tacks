@@ -53,6 +53,8 @@ pub struct UpdateTaskBody {
     pub assignee: Option<String>,
     pub tags: Option<Vec<String>>,
     pub notes: Option<String>,
+    /// Reparent: set to a task ID to move under that parent, or "none" to promote to top-level.
+    pub parent_id: Option<String>,
 }
 
 /// Request body for POST /api/tasks/:id/close.
@@ -395,8 +397,17 @@ pub async fn api_update_task(
             db.update_tags(&id, tags)?;
         }
 
+        // Convert parent_id field to two-level Option for reparenting
+        let new_parent: Option<Option<&str>> = body.parent_id.as_deref().map(|p| {
+            if p.eq_ignore_ascii_case("none") || p.is_empty() {
+                None
+            } else {
+                Some(p)
+            }
+        });
+
         // Update remaining fields
-        db.update_task(
+        db.update_task_with_parent(
             &id,
             body.title.as_deref(),
             body.priority,
@@ -405,6 +416,7 @@ pub async fn api_update_task(
             body.assignee.as_deref(),
             None,
             body.notes.as_deref(),
+            new_parent,
         )?;
 
         // Return the updated task
