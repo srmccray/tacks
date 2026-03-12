@@ -37,7 +37,7 @@
         {%- else if ep.task.status == crate::models::Status::Done -%}✓ Done
         {%- else -%}⊘ Blocked{%- endif -%}
       </span></td>
-      <td>{{ ep.children_done }}/{{ ep.children_total }}</td>
+      <td><span class="progress-done">{{ ep.children_done }}</span>/<span class="progress-wip">{{ ep.children_in_progress }}</span>/<span class="progress-open">{{ ep.children_open }}</span></td>
     </tr>
     {% endfor %}
     {% endif %}
