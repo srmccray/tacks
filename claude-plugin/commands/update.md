@@ -1,14 +1,15 @@
 ---
-description: Update task fields, claim a task, or set working notes
+description: Update task fields, claim a task, set working notes, or reparent under an epic
 ---
 
-Run `tk update <id>` to modify task properties. Use `--claim` to take ownership and move the task to in_progress.
+Run `tk update <id>` to modify task properties. Use `--claim` to take ownership and move the task to in_progress. Use `--parent` to reparent a task under an epic or promote it to top-level.
 
 ## Usage
 
 ```bash
 tk update <id> [--title <title>] [--priority <n>] [--status <status>]
                [--tags <tags>] [--assignee <name>] [--claim] [--notes <text>]
+               [--parent <id>|none]
 ```
 
 ## Flags
@@ -22,6 +23,8 @@ tk update <id> [--title <title>] [--priority <n>] [--status <status>]
 | `--assignee <name>` | Assign to a person or agent |
 | `--claim` | Set status to `in_progress` and assignee to current user |
 | `--notes <text>` | Set mutable working notes (overwrites previous notes) |
+| `--parent <id>` | Move task under a parent/epic |
+| `--parent none` | Promote subtask to top-level task |
 
 ## Instructions
 
@@ -43,6 +46,12 @@ tk update tk-a1b2 --notes "Investigated root cause — issue is in auth middlewa
 
 # Change status to blocked
 tk update tk-a1b2 --status blocked
+
+# Reparent a task under an epic
+tk update tk-a1b2 --parent tk-c3d4
+
+# Promote a subtask to top-level
+tk update tk-c3d4.1 --parent none
 ```
 
 ## Notes

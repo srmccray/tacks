@@ -39,6 +39,8 @@ tk create "Write tests" -d "Unit and integration tests for auth module"
 tk list                              # show open tasks
 tk ready                             # tasks with no blockers
 tk update <id> --claim               # claim a task (sets in_progress + assignee)
+tk update <id> --parent <epic-id>    # reparent task under an epic
+tk update <id> --parent none         # promote subtask to top-level
 tk close <id> -c "Done"              # close with comment
 ```
 
@@ -51,7 +53,7 @@ tk close <id> -c "Done"              # close with comment
 | `tk list` | List open tasks (`-a` all, `-s` status, `-p` priority, `-t` tag, `--parent` filter) |
 | `tk ready` | Show tasks with no open blockers (`--limit N`) |
 | `tk show <id>` | Task details with blockers, dependents, comments, notes |
-| `tk update <id>` | Update fields (`--claim`, `--notes`, `-d`, `-p`, `-t`, `-s`) |
+| `tk update <id>` | Update fields (`--claim`, `--notes`, `--parent`, `-d`, `-p`, `-t`, `-s`) |
 | `tk close <id>` | Close a task (`-c` comment, `-r` reason, `--force` to bypass subtask guard) |
 | `tk dep add <child> <parent>` | Add a dependency (cycle-checked) |
 | `tk dep remove <child> <parent>` | Remove a dependency |
