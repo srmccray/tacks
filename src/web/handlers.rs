@@ -921,6 +921,8 @@ struct EpicDetailTemplate {
     task: Task,
     children: Vec<Task>,
     children_done: usize,
+    children_in_progress: usize,
+    children_open: usize,
     children_total: usize,
     /// Pre-computed per-status counts for board view column headers.
     board_open_count: usize,
@@ -1489,10 +1491,14 @@ pub async fn epic_detail(
                 .iter()
                 .filter(|c| matches!(c.status, crate::models::Status::Blocked))
                 .count();
+            let children_in_progress = board_in_progress_count;
+            let children_open = children_total - children_done - children_in_progress;
             Ok(Some(EpicDetailTemplate {
                 task,
                 children,
                 children_done,
+                children_in_progress,
+                children_open,
                 children_total,
                 board_open_count,
                 board_in_progress_count,
