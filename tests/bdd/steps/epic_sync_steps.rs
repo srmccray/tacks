@@ -56,17 +56,6 @@ fn find_task_id_by_title(world: &TacksWorld, title: &str) -> String {
 // When steps
 // ---------------------------------------------------------------------------
 
-#[when(expr = "I claim subtask {string}")]
-async fn i_claim_subtask(world: &mut TacksWorld, title: String) {
-    let id = find_task_id_by_title(world, &title);
-    run_tk(world, &["update", &id, "--claim"]);
-    assert_eq!(
-        world.last_exit_code, 0,
-        "claim failed: {}",
-        world.last_stderr
-    );
-}
-
 #[when(expr = "I reopen subtask {string}")]
 async fn i_reopen_subtask(world: &mut TacksWorld, title: String) {
     let id = find_task_id_by_title(world, &title);

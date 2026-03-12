@@ -56,7 +56,7 @@ Feature: Board drag-and-drop status transitions
     Then the response status is 200
     And the response JSON field "status" equals "open"
 
-  Scenario: Drag-and-drop on epic detail board updates only the subtask
+  Scenario: Drag-and-drop on epic detail board updates subtask and syncs epic
     Given I created a task via API with title "My epic" as "epic"
     And I created a subtask via API with title "Subtask one" under "epic" as "subtask"
     When I PATCH the API task "subtask" with body '{"status":"in_progress"}'
@@ -64,7 +64,7 @@ Feature: Board drag-and-drop status transitions
     And the response JSON field "status" equals "in_progress"
     When I GET the API task "epic"
     Then the response status is 200
-    And the response JSON field "status" equals "open"
+    And the response JSON field "status" equals "in_progress"
     When I GET the API task "subtask"
     Then the response status is 200
     And the response JSON field "status" equals "in_progress"

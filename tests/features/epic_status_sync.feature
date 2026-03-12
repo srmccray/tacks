@@ -40,13 +40,13 @@ Feature: Automatic epic status sync
     And I show task "epic" in JSON
     Then the task details show status "in_progress"
 
-  Scenario: Claiming a child does not change epic from open
+  Scenario: Claiming a child moves epic to in_progress
     Given I have a task called "epic" with title "Open epic" and tag "epic"
     When I create a subtask of "epic" with title "WIP step"
     And I create a subtask of "epic" with title "Other step"
     And I claim subtask "WIP step"
     And I show task "epic" in JSON
-    Then the task details show status "open"
+    Then the task details show status "in_progress"
 
   Scenario: Reopening a child reverts done epic to in_progress
     Given I have a task called "epic" with title "Reverted epic" and tag "epic"
