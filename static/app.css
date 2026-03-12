@@ -1549,3 +1549,29 @@ a.view-toggle-btn:focus-visible {
     min-width: 8rem;
   }
 }
+
+/* Epic progress: three-part done/in-progress/open color coding */
+.progress-done {
+  color: #166534;
+  font-weight: 600;
+}
+.progress-wip {
+  color: #92400e;
+  font-weight: 600;
+}
+.progress-open {
+  color: var(--pico-muted-color);
+  font-weight: 600;
+}
+[data-theme="dark"] .progress-done {
+  color: #86efac;
+}
+[data-theme="dark"] .progress-wip {
+  color: #fde68a;
+}
+[data-theme="dark"] .progress-open {
+  color: var(--pico-muted-color);
+}
+.progress-total {
+  color: var(--pico-muted-color);
+}

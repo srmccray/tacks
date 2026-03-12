@@ -613,6 +613,8 @@ pub struct EpicProgress {
     pub task: Task,
     pub children_total: usize,
     pub children_done: usize,
+    pub children_in_progress: usize,
+    pub children_open: usize,
 }
 
 /// GET /api/epics — List epics with child completion progress (200).
@@ -630,10 +632,17 @@ pub async fn api_epics(State(state): State<AppState>) -> Result<impl IntoRespons
                     .iter()
                     .filter(|c| matches!(c.status, crate::models::Status::Done))
                     .count();
+                let children_in_progress = children
+                    .iter()
+                    .filter(|c| matches!(c.status, crate::models::Status::InProgress))
+                    .count();
+                let children_open = children_total - children_done - children_in_progress;
                 out.push(EpicProgress {
                     task: epic,
                     children_total,
                     children_done,
+                    children_in_progress,
+                    children_open,
                 });
             }
             Ok(out)
@@ -888,10 +897,13 @@ pub struct BoardQuery {
 }
 
 /// Template struct for one row in the epics view.
+#[allow(dead_code)]
 struct EpicRow {
     task: Task,
     children_total: usize,
     children_done: usize,
+    children_in_progress: usize,
+    children_open: usize,
 }
 
 /// Template for the epics page at GET /epics.
@@ -904,10 +916,13 @@ struct EpicsTemplate {
 /// Template for the epic detail page at GET /epics/:id.
 #[derive(Template)]
 #[template(path = "epic_detail.html")]
+#[allow(dead_code)]
 struct EpicDetailTemplate {
     task: Task,
     children: Vec<Task>,
     children_done: usize,
+    children_in_progress: usize,
+    children_open: usize,
     children_total: usize,
     /// Pre-computed per-status counts for board view column headers.
     board_open_count: usize,
@@ -1402,10 +1417,17 @@ pub async fn epics(State(state): State<AppState>) -> Response {
                 .iter()
                 .filter(|c| matches!(c.status, crate::models::Status::Done))
                 .count();
+            let children_in_progress = children
+                .iter()
+                .filter(|c| matches!(c.status, crate::models::Status::InProgress))
+                .count();
+            let children_open = children_total - children_done - children_in_progress;
             rows.push(EpicRow {
                 task,
                 children_total,
                 children_done,
+                children_in_progress,
+                children_open,
             });
         }
         Ok(rows)
@@ -1469,10 +1491,14 @@ pub async fn epic_detail(
                 .iter()
                 .filter(|c| matches!(c.status, crate::models::Status::Blocked))
                 .count();
+            let children_in_progress = board_in_progress_count;
+            let children_open = children_total - children_done - children_in_progress;
             Ok(Some(EpicDetailTemplate {
                 task,
                 children,
                 children_done,
+                children_in_progress,
+                children_open,
                 children_total,
                 board_open_count,
                 board_in_progress_count,
