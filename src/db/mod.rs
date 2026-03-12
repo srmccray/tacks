@@ -786,7 +786,7 @@ impl Database {
     /// Recalculate and update an epic's status based on its children's statuses.
     ///
     /// - All children open/blocked → epic status = open
-    /// - Any children done but not all → epic status = in_progress
+    /// - Any children done or in_progress (but not all done) → epic status = in_progress
     /// - All children done → epic status = done
     /// - No children → no change
     ///
@@ -803,10 +803,13 @@ impl Database {
         let any_done = children
             .iter()
             .any(|c| c.status == crate::models::Status::Done);
+        let any_in_progress = children
+            .iter()
+            .any(|c| c.status == crate::models::Status::InProgress);
 
         let new_status = if all_done {
             "done"
-        } else if any_done {
+        } else if any_done || any_in_progress {
             "in_progress"
         } else {
             "open"
