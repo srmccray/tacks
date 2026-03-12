@@ -5,6 +5,7 @@ pub mod close_guard_steps;
 pub mod common_steps;
 pub mod create_modal_steps;
 pub mod dep_steps;
+pub mod epic_progress_steps;
 pub mod epic_status_steps;
 pub mod epic_steps;
 pub mod filter_steps;
