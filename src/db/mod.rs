@@ -308,8 +308,22 @@ impl Database {
     }
 
     /// Close a task: set status to done and record the close_reason.
+    ///
+    /// Automatically syncs the parent epic's status if this task is a subtask.
     pub fn close_task(&self, id: &str, reason: Option<&str>) -> Result<(), String> {
-        self.update_task(id, None, None, Some("done"), None, None, reason, None)
+        self.update_task(id, None, None, Some("done"), None, None, reason, None)?;
+        self.sync_parent_epic(id)?;
+        Ok(())
+    }
+
+    /// If the given task has a parent, recalculate and update the parent epic's status.
+    fn sync_parent_epic(&self, task_id: &str) -> Result<(), String> {
+        if let Some(task) = self.get_task(task_id)?
+            && let Some(pid) = &task.parent_id
+        {
+            self.sync_epic_status(pid)?;
+        }
+        Ok(())
     }
 
     pub fn update_tags(&self, id: &str, tags: &[String]) -> Result<(), String> {
@@ -686,6 +700,56 @@ impl Database {
             tasks.push(row.map_err(|e| format!("row error: {e}"))?);
         }
         Ok(tasks)
+    }
+
+    /// Recalculate and update an epic's status based on its children's statuses.
+    ///
+    /// - All children open/blocked → epic status = open
+    /// - Any children done but not all → epic status = in_progress
+    /// - All children done → epic status = done
+    /// - No children → no change
+    ///
+    /// Call this after any operation that changes a child task's status.
+    pub fn sync_epic_status(&self, epic_id: &str) -> Result<(), String> {
+        let children = self.get_children(epic_id)?;
+        if children.is_empty() {
+            return Ok(());
+        }
+
+        let all_done = children
+            .iter()
+            .all(|c| c.status == crate::models::Status::Done);
+        let any_done = children
+            .iter()
+            .any(|c| c.status == crate::models::Status::Done);
+
+        let new_status = if all_done {
+            "done"
+        } else if any_done {
+            "in_progress"
+        } else {
+            "open"
+        };
+
+        // Only update if status actually changed
+        let epic = self.get_task(epic_id)?;
+        if let Some(epic) = epic {
+            let current = epic.status.as_str();
+            if current != new_status {
+                self.update_task(
+                    epic_id,
+                    None,
+                    None,
+                    Some(new_status),
+                    None,
+                    None,
+                    None,
+                    None,
+                )?;
+            }
+        }
+
+        Ok(())
     }
 }
 

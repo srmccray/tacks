@@ -39,6 +39,14 @@ pub fn run(
         notes,
     )?;
 
+    // Sync parent epic status if this task's status changed
+    if effective_status.is_some()
+        && let Some(task) = db.get_task(id)?
+        && let Some(ref pid) = task.parent_id
+    {
+        db.sync_epic_status(pid)?;
+    }
+
     // Handle tag changes
     if add_tags.is_some() || remove_tags.is_some() {
         let mut current_tags = db.get_task_tags(id)?;
