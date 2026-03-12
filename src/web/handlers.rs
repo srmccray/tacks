@@ -189,13 +189,14 @@ pub async fn api_create_task(
 
         db.insert_task(&task)?;
 
-        // Auto-tag parent as epic when a child is created
+        // Auto-tag parent as epic when a child is created, and sync epic status
         if let Some(ref pid) = parent_id {
             let mut parent_tags = db.get_task_tags(pid)?;
             if !parent_tags.contains(&"epic".to_string()) {
                 parent_tags.push("epic".to_string());
                 db.update_tags(pid, &parent_tags)?;
             }
+            db.sync_epic_status(pid)?;
         }
 
         Ok(task)
@@ -418,6 +419,14 @@ pub async fn api_update_task(
             body.notes.as_deref(),
             new_parent,
         )?;
+
+        // Sync parent epic status if this task's status changed
+        if body.status.is_some()
+            && let Some(task) = db.get_task(&id)?
+            && let Some(ref pid) = task.parent_id
+        {
+            db.sync_epic_status(pid)?;
+        }
 
         // Return the updated task
         db.get_task(&id)?

@@ -52,13 +52,14 @@ pub fn run(
 
     db.insert_task(&task)?;
 
-    // Auto-tag parent as epic when a child is created
+    // Auto-tag parent as epic when a child is created, and sync epic status
     if let Some(parent_id) = parent {
         let mut parent_tags = db.get_task_tags(parent_id)?;
         if !parent_tags.contains(&"epic".to_string()) {
             parent_tags.push("epic".to_string());
             db.update_tags(parent_id, &parent_tags)?;
         }
+        db.sync_epic_status(parent_id)?;
     }
 
     if json {
