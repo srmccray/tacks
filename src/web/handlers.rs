@@ -53,6 +53,8 @@ pub struct UpdateTaskBody {
     pub assignee: Option<String>,
     pub tags: Option<Vec<String>>,
     pub notes: Option<String>,
+    /// Reparent: set to a task ID to move under that parent, or "none" to promote to top-level.
+    pub parent_id: Option<String>,
 }
 
 /// Request body for POST /api/tasks/:id/close.
@@ -396,8 +398,17 @@ pub async fn api_update_task(
             db.update_tags(&id, tags)?;
         }
 
+        // Convert parent_id field to two-level Option for reparenting
+        let new_parent: Option<Option<&str>> = body.parent_id.as_deref().map(|p| {
+            if p.eq_ignore_ascii_case("none") || p.is_empty() {
+                None
+            } else {
+                Some(p)
+            }
+        });
+
         // Update remaining fields
-        db.update_task(
+        db.update_task_with_parent(
             &id,
             body.title.as_deref(),
             body.priority,
@@ -406,6 +417,7 @@ pub async fn api_update_task(
             body.assignee.as_deref(),
             None,
             body.notes.as_deref(),
+            new_parent,
         )?;
 
         // Sync parent epic status if this task's status changed
@@ -622,6 +634,8 @@ pub struct EpicProgress {
     pub task: Task,
     pub children_total: usize,
     pub children_done: usize,
+    pub children_in_progress: usize,
+    pub children_open: usize,
 }
 
 /// GET /api/epics — List epics with child completion progress (200).
@@ -639,10 +653,17 @@ pub async fn api_epics(State(state): State<AppState>) -> Result<impl IntoRespons
                     .iter()
                     .filter(|c| matches!(c.status, crate::models::Status::Done))
                     .count();
+                let children_in_progress = children
+                    .iter()
+                    .filter(|c| matches!(c.status, crate::models::Status::InProgress))
+                    .count();
+                let children_open = children_total - children_done - children_in_progress;
                 out.push(EpicProgress {
                     task: epic,
                     children_total,
                     children_done,
+                    children_in_progress,
+                    children_open,
                 });
             }
             Ok(out)
@@ -897,10 +918,13 @@ pub struct BoardQuery {
 }
 
 /// Template struct for one row in the epics view.
+#[allow(dead_code)]
 struct EpicRow {
     task: Task,
     children_total: usize,
     children_done: usize,
+    children_in_progress: usize,
+    children_open: usize,
 }
 
 /// Template for the epics page at GET /epics.
@@ -913,10 +937,13 @@ struct EpicsTemplate {
 /// Template for the epic detail page at GET /epics/:id.
 #[derive(Template)]
 #[template(path = "epic_detail.html")]
+#[allow(dead_code)]
 struct EpicDetailTemplate {
     task: Task,
     children: Vec<Task>,
     children_done: usize,
+    children_in_progress: usize,
+    children_open: usize,
     children_total: usize,
     /// Pre-computed per-status counts for board view column headers.
     board_open_count: usize,
@@ -1411,10 +1438,17 @@ pub async fn epics(State(state): State<AppState>) -> Response {
                 .iter()
                 .filter(|c| matches!(c.status, crate::models::Status::Done))
                 .count();
+            let children_in_progress = children
+                .iter()
+                .filter(|c| matches!(c.status, crate::models::Status::InProgress))
+                .count();
+            let children_open = children_total - children_done - children_in_progress;
             rows.push(EpicRow {
                 task,
                 children_total,
                 children_done,
+                children_in_progress,
+                children_open,
             });
         }
         Ok(rows)
@@ -1478,10 +1512,14 @@ pub async fn epic_detail(
                 .iter()
                 .filter(|c| matches!(c.status, crate::models::Status::Blocked))
                 .count();
+            let children_in_progress = board_in_progress_count;
+            let children_open = children_total - children_done - children_in_progress;
             Ok(Some(EpicDetailTemplate {
                 task,
                 children,
                 children_done,
+                children_in_progress,
+                children_open,
                 children_total,
                 board_open_count,
                 board_in_progress_count,

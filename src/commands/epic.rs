@@ -4,6 +4,8 @@ use crate::db::Database;
 use crate::models::Status;
 
 /// Show epic progress: tasks tagged 'epic' with child completion stats.
+///
+/// Displays three-part progress counts: done/in_progress/open.
 pub fn run(db_path: &Path, json: bool) -> Result<(), String> {
     let db = Database::open(db_path)?;
 
@@ -16,6 +18,11 @@ pub fn run(db_path: &Path, json: bool) -> Result<(), String> {
             let children = db.get_children(&epic.id)?;
             let total = children.len();
             let done = children.iter().filter(|c| c.status == Status::Done).count();
+            let in_progress = children
+                .iter()
+                .filter(|c| c.status == Status::InProgress)
+                .count();
+            let open = total - done - in_progress;
             let pct = if total > 0 {
                 (done as f64 / total as f64 * 100.0) as u32
             } else {
@@ -28,6 +35,8 @@ pub fn run(db_path: &Path, json: bool) -> Result<(), String> {
                 "priority": epic.priority,
                 "children_total": total,
                 "children_done": done,
+                "children_in_progress": in_progress,
+                "children_open": open,
                 "progress_pct": pct,
             }));
         }
@@ -51,6 +60,11 @@ pub fn run(db_path: &Path, json: bool) -> Result<(), String> {
         let children = db.get_children(&epic.id)?;
         let total = children.len();
         let done = children.iter().filter(|c| c.status == Status::Done).count();
+        let in_progress = children
+            .iter()
+            .filter(|c| c.status == Status::InProgress)
+            .count();
+        let open = total - done - in_progress;
         let pct = if total > 0 {
             (done as f64 / total as f64 * 100.0) as u32
         } else {
@@ -62,13 +76,14 @@ pub fn run(db_path: &Path, json: bool) -> Result<(), String> {
             epic.title.clone()
         };
         println!(
-            "{:<12} {:<4} {:<12} {:<40} {}/{} ({}%)",
+            "{:<12} {:<4} {:<12} {:<40} {}/{}/{} ({}%)",
             epic.id,
             super::format_priority(epic.priority),
             super::format_status(&epic.status),
             title,
             done,
-            total,
+            in_progress,
+            open,
             pct,
         );
     }

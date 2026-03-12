@@ -238,6 +238,38 @@ impl Database {
         close_reason: Option<&str>,
         notes: Option<&str>,
     ) -> Result<(), String> {
+        self.update_task_with_parent(
+            id,
+            title,
+            priority,
+            status,
+            description,
+            assignee,
+            close_reason,
+            notes,
+            None,
+        )
+    }
+
+    /// Update task fields, optionally reparenting to a new parent.
+    ///
+    /// `new_parent` uses a two-level Option:
+    /// - `None` — do not change parent_id
+    /// - `Some(Some("tk-xxxx"))` — set parent_id to the given task
+    /// - `Some(None)` — clear parent_id (promote to top-level)
+    #[allow(clippy::too_many_arguments)]
+    pub fn update_task_with_parent(
+        &self,
+        id: &str,
+        title: Option<&str>,
+        priority: Option<u8>,
+        status: Option<&str>,
+        description: Option<&str>,
+        assignee: Option<&str>,
+        close_reason: Option<&str>,
+        notes: Option<&str>,
+        new_parent: Option<Option<&str>>,
+    ) -> Result<(), String> {
         let mut sets = Vec::new();
         let mut param_values: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
         let mut idx = 1;
@@ -279,6 +311,55 @@ impl Database {
             sets.push(format!("notes = ?{idx}"));
             param_values.push(Box::new(n.to_string()));
             idx += 1;
+        }
+
+        // Handle reparenting
+        if let Some(maybe_parent) = new_parent {
+            match maybe_parent {
+                Some(new_pid) => {
+                    // Validate: no self-parenting
+                    if new_pid == id {
+                        return Err("cannot reparent a task under itself".to_string());
+                    }
+                    // Validate: new parent must exist
+                    self.get_task(new_pid)?
+                        .ok_or_else(|| format!("parent task not found: {new_pid}"))?;
+                    // Validate: new parent must not itself be a subtask (max depth 1)
+                    let parent_task = self.get_task(new_pid)?.unwrap();
+                    if parent_task.parent_id.is_some() {
+                        return Err(format!(
+                            "cannot reparent under {new_pid}: it is already a subtask (max depth is 1)"
+                        ));
+                    }
+                    // Validate: no circular parenting (child is not an ancestor of new parent)
+                    // Check if new_pid is a child of id (which would create a cycle)
+                    let my_children = self.get_children(id)?;
+                    for child in &my_children {
+                        if child.id == new_pid {
+                            return Err(
+                                "circular parenting: the new parent is a child of this task"
+                                    .to_string(),
+                            );
+                        }
+                    }
+
+                    sets.push(format!("parent_id = ?{idx}"));
+                    param_values.push(Box::new(new_pid.to_string()));
+                    idx += 1;
+
+                    // Auto-tag new parent as epic
+                    let mut parent_tags = self.get_task_tags(new_pid)?;
+                    if !parent_tags.contains(&"epic".to_string()) {
+                        parent_tags.push("epic".to_string());
+                        self.update_tags(new_pid, &parent_tags)?;
+                    }
+                }
+                None => {
+                    // Clear parent_id (promote to top-level)
+                    sets.push("parent_id = NULL".to_string());
+                    // No param needed for NULL
+                }
+            }
         }
 
         if sets.is_empty() {
