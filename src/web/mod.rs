@@ -6,6 +6,7 @@ use axum::{
     response::{IntoResponse, Response},
     routing::{delete, get, post},
 };
+use pulldown_cmark::{Options, Parser, html};
 use rust_embed::Embed;
 use std::sync::{Arc, Mutex, atomic::AtomicI64};
 
@@ -19,6 +20,67 @@ pub struct AppState {
 
 pub mod errors;
 mod handlers;
+
+/// Render a markdown string to an HTML string.
+///
+/// Enables tables, strikethrough, task lists, and heading attributes.
+/// No HTML sanitization is applied — input is assumed to be from trusted agent sources.
+pub fn render_markdown(input: &str) -> String {
+    let mut options = Options::empty();
+    options.insert(Options::ENABLE_TABLES);
+    options.insert(Options::ENABLE_STRIKETHROUGH);
+    options.insert(Options::ENABLE_TASKLISTS);
+    options.insert(Options::ENABLE_HEADING_ATTRIBUTES);
+    let parser = Parser::new_ext(input, options);
+    let mut output = String::new();
+    html::push_html(&mut output, parser);
+    output
+}
+
+#[cfg(test)]
+mod tests {
+    use super::render_markdown;
+
+    #[test]
+    fn test_render_markdown_basics() {
+        // Headings
+        let html = render_markdown("# Hello");
+        assert!(
+            html.contains("<h1>Hello</h1>"),
+            "expected h1 tag, got: {html}"
+        );
+
+        // Code blocks
+        let html = render_markdown("```\nlet x = 1;\n```");
+        assert!(html.contains("<code>"), "expected code block, got: {html}");
+
+        // Lists
+        let html = render_markdown("- item one\n- item two");
+        assert!(html.contains("<ul>"), "expected ul tag, got: {html}");
+        assert!(
+            html.contains("<li>item one</li>"),
+            "expected li item, got: {html}"
+        );
+
+        // Inline code
+        let html = render_markdown("Use `cargo build` to compile.");
+        assert!(
+            html.contains("<code>cargo build</code>"),
+            "expected inline code, got: {html}"
+        );
+
+        // Tables (ENABLE_TABLES option)
+        let html = render_markdown("| A | B |\n|---|---|\n| 1 | 2 |");
+        assert!(html.contains("<table>"), "expected table tag, got: {html}");
+
+        // Strikethrough (ENABLE_STRIKETHROUGH option)
+        let html = render_markdown("~~removed~~");
+        assert!(
+            html.contains("<del>removed</del>"),
+            "expected del tag, got: {html}"
+        );
+    }
+}
 
 /// Embedded static assets (htmx, pico CSS, etc.) compiled into the binary.
 #[derive(Embed)]

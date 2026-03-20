@@ -35,7 +35,11 @@
   <span class="meta-item"><span class="meta-label">Updated</span> {{ task.updated_at.format("%b %d, %Y %H:%M") }}</span>
 </div>
 
-<p class="task-description" data-editable data-field="description" data-task-id="{{ task.id }}">{{ task.description.as_deref().unwrap_or("—") }}</p>
+{% if let Some(html) = description_html.as_deref() %}
+<div class="task-description markdown-body" data-editable data-field="description" data-task-id="{{ task.id }}">{{ html|safe }}</div>
+{% else %}
+<div class="task-description" data-editable data-field="description" data-task-id="{{ task.id }}">—</div>
+{% endif %}
 
 {% if !blockers.is_empty() %}
 <section>
@@ -62,10 +66,10 @@
 {% if !comments.is_empty() %}
 <section>
   <h2>Comments</h2>
-  {% for comment in comments %}
+  {% for (i, comment) in comments.iter().enumerate() %}
   <article>
     <small>{{ comment.created_at.format("%b %d, %Y %H:%M") }}</small>
-    <p>{{ comment.body }}</p>
+    <div class="markdown-body">{{ comment_bodies_html[i]|safe }}</div>
   </article>
   {% endfor %}
 </section>

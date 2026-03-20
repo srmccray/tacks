@@ -11,6 +11,7 @@ use std::sync::atomic::Ordering;
 use crate::models::{Comment, Task, validate_close_reason};
 use crate::web::AppState;
 use crate::web::errors::AppError;
+use crate::web::render_markdown;
 
 /// Render an askama template into an axum HTML response.
 fn render_template<T: Template>(template: T) -> Response {
@@ -867,6 +868,7 @@ struct TaskListTemplate {
 /// Template for the task detail page at GET /tasks/:id.
 #[derive(Template)]
 #[template(path = "task_detail.html")]
+#[allow(dead_code)]
 struct TaskDetailTemplate {
     task: Task,
     /// Parent epic, if this task is a subtask.
@@ -874,11 +876,16 @@ struct TaskDetailTemplate {
     blockers: Vec<Task>,
     dependents: Vec<Task>,
     comments: Vec<Comment>,
+    /// Pre-rendered HTML for the task description (markdown → HTML, safe to output unescaped).
+    description_html: Option<String>,
+    /// Pre-rendered HTML for each comment body (markdown → HTML, safe to output unescaped).
+    comment_bodies_html: Vec<String>,
 }
 
 /// Template for the task detail modal fragment loaded via HTMX.
 #[derive(Template)]
 #[template(path = "task_detail_fragment.html")]
+#[allow(dead_code)]
 struct TaskDetailFragmentTemplate {
     task: Task,
     /// Parent epic, if this task is a subtask.
@@ -886,6 +893,10 @@ struct TaskDetailFragmentTemplate {
     blockers: Vec<Task>,
     dependents: Vec<Task>,
     comments: Vec<Comment>,
+    /// Pre-rendered HTML for the task description (markdown → HTML, safe to output unescaped).
+    description_html: Option<String>,
+    /// Pre-rendered HTML for each comment body (markdown → HTML, safe to output unescaped).
+    comment_bodies_html: Vec<String>,
 }
 
 /// Template for the kanban board page at GET /board.
@@ -952,6 +963,8 @@ struct EpicDetailTemplate {
     board_done_count: usize,
     /// Current view mode: "list" (default) or "board".
     view: String,
+    /// Pre-rendered HTML for the epic description (markdown → HTML, safe to output unescaped).
+    description_html: Option<String>,
 }
 
 /// Query parameters for GET /epics/:id.
@@ -1260,6 +1273,14 @@ pub async fn task_detail(
 
     match result {
         Ok(Some(data)) => {
+            // Pre-render description and comment bodies from markdown to HTML.
+            // The |safe filter in the template prevents double-escaping.
+            let description_html = data.task.description.as_deref().map(render_markdown);
+            let comment_bodies_html = data
+                .comments
+                .iter()
+                .map(|c| render_markdown(&c.body))
+                .collect::<Vec<_>>();
             if is_htmx {
                 render_template(TaskDetailFragmentTemplate {
                     task: data.task,
@@ -1267,6 +1288,8 @@ pub async fn task_detail(
                     blockers: data.blockers,
                     dependents: data.dependents,
                     comments: data.comments,
+                    description_html,
+                    comment_bodies_html,
                 })
             } else {
                 render_template(TaskDetailTemplate {
@@ -1275,6 +1298,8 @@ pub async fn task_detail(
                     blockers: data.blockers,
                     dependents: data.dependents,
                     comments: data.comments,
+                    description_html,
+                    comment_bodies_html,
                 })
             }
         }
@@ -1514,6 +1539,9 @@ pub async fn epic_detail(
                 .count();
             let children_in_progress = board_in_progress_count;
             let children_open = children_total - children_done - children_in_progress;
+            // Pre-render description from markdown to HTML.
+            // The |safe filter in the template prevents double-escaping.
+            let description_html = task.description.as_deref().map(render_markdown);
             Ok(Some(EpicDetailTemplate {
                 task,
                 children,
@@ -1526,6 +1554,7 @@ pub async fn epic_detail(
                 board_blocked_count,
                 board_done_count: children_done,
                 view: view_clone,
+                description_html,
             }))
         })
         .await
