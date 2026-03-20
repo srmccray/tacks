@@ -193,6 +193,18 @@ async fn i_get_the_html_task(world: &mut TacksWorld, alias: String) {
     http_get(world, &format!("/tasks/{id}")).await;
 }
 
+/// Perform a GET request to the HTML epic detail page for a task identified by
+/// alias (e.g. GET /epics/:id).
+#[when(expr = "I GET the HTML epic {string}")]
+async fn i_get_the_html_epic(world: &mut TacksWorld, alias: String) {
+    let id = world
+        .task_ids
+        .get(&alias)
+        .unwrap_or_else(|| panic!("no task with alias '{alias}'"))
+        .clone();
+    http_get(world, &format!("/epics/{id}")).await;
+}
+
 /// Perform an HTMX GET request to the detail page for a task identified by
 /// alias (sends HX-Request header to get fragment response).
 #[when(expr = "I HTMX GET the task {string}")]
