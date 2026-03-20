@@ -62,8 +62,9 @@ pub fn print_tasks(tasks: &[Task], json: bool) -> Result<(), String> {
         } else {
             t.tags.join(", ")
         };
-        let title = if t.title.len() > 48 {
-            format!("{}...", &t.title[..45])
+        let title = if t.title.chars().count() > 48 {
+            let truncated: String = t.title.chars().take(45).collect();
+            format!("{truncated}...")
         } else {
             t.title.clone()
         };
@@ -77,4 +78,43 @@ pub fn print_tasks(tasks: &[Task], json: bool) -> Result<(), String> {
         );
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::{Status, Task};
+    use chrono::Utc;
+
+    fn make_task(title: &str) -> Task {
+        let now = Utc::now();
+        Task {
+            id: "tk-0001".to_string(),
+            title: title.to_string(),
+            description: None,
+            status: Status::Open,
+            priority: 2,
+            assignee: None,
+            parent_id: None,
+            tags: vec![],
+            created_at: now,
+            updated_at: now,
+            close_reason: None,
+            notes: None,
+        }
+    }
+
+    /// Verify that print_tasks does not panic when a title contains multi-byte
+    /// UTF-8 characters (em dash is 3 bytes) and the character count exceeds 48.
+    #[test]
+    fn test_print_tasks_with_multibyte_chars() {
+        // Build a title that is >48 chars long with em dashes (3 bytes each).
+        // "Task with em dash \u{2014} " prefix (24 chars) + 30 em dashes = 54 chars total.
+        let long_title = format!("Task with em dash \u{2014} {}", "\u{2014}".repeat(30));
+        assert!(long_title.chars().count() > 48);
+
+        let tasks = vec![make_task(&long_title)];
+        // Should not panic — that is the regression being guarded.
+        print_tasks(&tasks, false).expect("print_tasks must not panic on multibyte chars");
+    }
 }
