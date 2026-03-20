@@ -943,6 +943,23 @@ struct EpicRow {
 #[template(path = "epics.html")]
 struct EpicsTemplate {
     epics: Vec<EpicRow>,
+    /// Currently active status filter (empty = none).
+    status_filter: Option<String>,
+    /// Currently active priority filter (empty = none).
+    priority_filter: Option<String>,
+    /// Pre-built query string for HTMX polling (preserves current filters).
+    poll_query: String,
+}
+
+/// Query parameters for GET /epics.
+#[derive(Debug, Deserialize)]
+pub struct EpicsQuery {
+    /// Comma-separated status values for multi-select OR filtering.
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
+    pub status: Option<String>,
+    /// Comma-separated priority values for multi-select OR filtering.
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
+    pub priority: Option<String>,
 }
 
 /// Template for the epic detail page at GET /epics/:id.
@@ -1449,8 +1466,14 @@ pub async fn board(State(state): State<AppState>, Query(query): Query<BoardQuery
     }
 }
 
-/// GET /epics — Epics overview with subtask progress.
-pub async fn epics(State(state): State<AppState>) -> Response {
+/// GET /epics — Epics overview with subtask progress, optional status/priority filters.
+pub async fn epics(State(state): State<AppState>, Query(query): Query<EpicsQuery>) -> Response {
+    let status_filter = query.status.clone();
+    let priority_filter = query.priority.clone();
+
+    let status_values = parse_status_values(&status_filter);
+    let priority_values = parse_priority_values(&priority_filter);
+
     let db = state.db.clone();
     let result = tokio::task::spawn_blocking(move || -> Result<Vec<EpicRow>, String> {
         let db = db.lock().unwrap();
@@ -1476,13 +1499,66 @@ pub async fn epics(State(state): State<AppState>) -> Response {
                 children_open,
             });
         }
+
+        // Post-filter by status (multi-select OR)
+        if !status_values.is_empty() {
+            rows.retain(|row| {
+                let s = match row.task.status {
+                    crate::models::Status::Open => "open",
+                    crate::models::Status::InProgress => "in_progress",
+                    crate::models::Status::Done => "done",
+                    crate::models::Status::Blocked => "blocked",
+                };
+                status_values.iter().any(|v| v == s)
+            });
+        }
+
+        // Post-filter by priority (multi-select OR)
+        if !priority_values.is_empty() {
+            rows.retain(|row| priority_values.contains(&row.task.priority));
+        }
+
+        // Sort: in_progress first, then open, then done; within each group, priority ascending.
+        rows.sort_by(|a, b| {
+            let status_order = |s: &crate::models::Status| match s {
+                crate::models::Status::InProgress => 0,
+                crate::models::Status::Open => 1,
+                crate::models::Status::Blocked => 2,
+                crate::models::Status::Done => 3,
+            };
+            let sa = status_order(&a.task.status);
+            let sb = status_order(&b.task.status);
+            sa.cmp(&sb).then(a.task.priority.cmp(&b.task.priority))
+        });
+
         Ok(rows)
     })
     .await
     .unwrap();
 
+    // Build poll query preserving current filters.
+    let poll_query = {
+        let mut parts = Vec::new();
+        if let Some(s) = &status_filter {
+            parts.push(format!("status={s}"));
+        }
+        if let Some(p) = &priority_filter {
+            parts.push(format!("priority={p}"));
+        }
+        if parts.is_empty() {
+            String::new()
+        } else {
+            format!("?{}", parts.join("&"))
+        }
+    };
+
     match result {
-        Ok(epics) => render_template(EpicsTemplate { epics }),
+        Ok(epics) => render_template(EpicsTemplate {
+            epics,
+            status_filter,
+            priority_filter,
+            poll_query,
+        }),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("database error: {e}"),

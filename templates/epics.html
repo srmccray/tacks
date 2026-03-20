@@ -4,7 +4,7 @@
 
 {% block content %}
 <div id="content-area"
-     hx-get="/epics"
+     hx-get="/epics{{ poll_query }}"
      hx-trigger="every 2s [document.visibilityState === 'visible']"
      hx-target="this"
      hx-select="#content-area"
@@ -12,19 +12,59 @@
      aria-live="polite"
      aria-atomic="false">
 
+<form method="get" action="/epics"
+      hx-get="/epics"
+      hx-trigger="change from:#epics-status-hidden-input, change from:#epics-priority-hidden-input"
+      hx-target="#content-area"
+      hx-select="#content-area"
+      hx-swap="outerHTML"
+      hx-push-url="true">
+  <div class="grid">
+    <div class="filter-multiselect" id="epics-status-multiselect">
+      <div class="filter-multiselect-trigger" tabindex="0" aria-haspopup="listbox" aria-expanded="false" aria-label="Filter by status">
+        <span class="filter-multiselect-pills"></span>
+        <span class="filter-multiselect-placeholder">All statuses</span>
+      </div>
+      <ul class="filter-multiselect-dropdown" role="listbox" aria-multiselectable="true" hidden>
+        <li role="option" data-value="open" data-label="○ Open" data-badge-class="status-open"><span class="badge status-open">○ Open</span></li>
+        <li role="option" data-value="in_progress" data-label="◐ In Progress" data-badge-class="status-in_progress"><span class="badge status-in_progress">◐ In Progress</span></li>
+        <li role="option" data-value="done" data-label="✓ Done" data-badge-class="status-done"><span class="badge status-done">✓ Done</span></li>
+        <li role="option" data-value="blocked" data-label="⊘ Blocked" data-badge-class="status-blocked"><span class="badge status-blocked">⊘ Blocked</span></li>
+      </ul>
+      <input type="hidden" name="status" id="epics-status-hidden-input" value="{{ status_filter.as_deref().unwrap_or_default() }}">
+    </div>
+    <div class="filter-multiselect" id="epics-priority-multiselect">
+      <div class="filter-multiselect-trigger" tabindex="0" aria-haspopup="listbox" aria-expanded="false" aria-label="Filter by priority">
+        <span class="filter-multiselect-pills"></span>
+        <span class="filter-multiselect-placeholder">All priorities</span>
+      </div>
+      <ul class="filter-multiselect-dropdown" role="listbox" aria-multiselectable="true" hidden>
+        <li role="option" data-value="0" data-label="▲ P0" data-badge-class="priority-0"><span class="badge priority-0">▲ P0</span></li>
+        <li role="option" data-value="1" data-label="▲ P1" data-badge-class="priority-1"><span class="badge priority-1">▲ P1</span></li>
+        <li role="option" data-value="2" data-label="▬ P2" data-badge-class="priority-2"><span class="badge priority-2">▬ P2</span></li>
+        <li role="option" data-value="3" data-label="▽ P3" data-badge-class="priority-3"><span class="badge priority-3">▽ P3</span></li>
+        <li role="option" data-value="4" data-label="· P4" data-badge-class="priority-4"><span class="badge priority-4">· P4</span></li>
+      </ul>
+      <input type="hidden" name="priority" id="epics-priority-hidden-input" value="{{ priority_filter.as_deref().unwrap_or_default() }}">
+    </div>
+    <noscript><button type="submit">Filter</button></noscript>
+  </div>
+</form>
+
 <table>
   <thead>
     <tr>
       <th>ID</th>
       <th>Title</th>
       <th>Status</th>
+      <th>Priority</th>
       <th>Progress</th>
     </tr>
   </thead>
   <tbody>
     {% if epics.is_empty() %}
     <tr>
-      <td colspan="4" style="text-align:center;color:var(--pico-muted-color);padding:2rem 0">No epics yet</td>
+      <td colspan="5" style="text-align:center;color:var(--pico-muted-color);padding:2rem 0">No epics yet</td>
     </tr>
     {% else %}
     {% for ep in epics %}
@@ -36,6 +76,13 @@
         {%- else if ep.task.status == crate::models::Status::InProgress -%}◐ In Progress
         {%- else if ep.task.status == crate::models::Status::Done -%}✓ Done
         {%- else -%}⊘ Blocked{%- endif -%}
+      </span></td>
+      <td><span class="badge priority-{{ ep.task.priority }}">
+        {%- if ep.task.priority == 0 -%}▲ P0
+        {%- else if ep.task.priority == 1 -%}▲ P1
+        {%- else if ep.task.priority == 2 -%}▬ P2
+        {%- else if ep.task.priority == 3 -%}▽ P3
+        {%- else -%}· P4{%- endif -%}
       </span></td>
       <td><span class="progress-done">{{ ep.children_done }}</span>/<span class="progress-wip">{{ ep.children_in_progress }}</span>/<span class="progress-open">{{ ep.children_open }}</span> <span class="progress-total">({{ ep.children_total }})</span></td>
     </tr>
