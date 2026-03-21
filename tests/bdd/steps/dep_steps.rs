@@ -230,6 +230,34 @@ async fn the_task_details_include_blocker(world: &mut TacksWorld, expected_title
     );
 }
 
+#[then("the task details have no blockers")]
+async fn the_task_details_have_no_blockers(world: &mut TacksWorld) {
+    let json: Value =
+        serde_json::from_str(&world.last_stdout).expect("last output is not valid JSON");
+    let blockers = json["blockers"]
+        .as_array()
+        .expect("no 'blockers' array in show output");
+    assert!(
+        blockers.is_empty(),
+        "expected no blockers but found: {:?}",
+        blockers
+    );
+}
+
+#[then("the task details have no dependents")]
+async fn the_task_details_have_no_dependents(world: &mut TacksWorld) {
+    let json: Value =
+        serde_json::from_str(&world.last_stdout).expect("last output is not valid JSON");
+    let dependents = json["dependents"]
+        .as_array()
+        .expect("no 'dependents' array in show output");
+    assert!(
+        dependents.is_empty(),
+        "expected no dependents but found: {:?}",
+        dependents
+    );
+}
+
 // ---------------------------------------------------------------------------
 // Then steps — ready list
 // ---------------------------------------------------------------------------
