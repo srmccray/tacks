@@ -1870,6 +1870,66 @@ pub async fn task_dep_tree(
     }
 }
 
+/// A task and the subset of its blockers that are also children of the same epic.
+#[allow(dead_code)]
+struct EpicDepItem {
+    task: Task,
+    blockers: Vec<Task>,
+}
+
+/// Template for the epic dependency tree partial at GET /epics/:id/dep-tree.
+#[derive(Template)]
+#[template(path = "partials/epic_dep_tree.html")]
+#[allow(dead_code)]
+struct EpicDepTreeTemplate {
+    items: Vec<EpicDepItem>,
+}
+
+/// GET /epics/:id/dep-tree — Intra-epic dependency list (lazy-loaded HTML partial).
+///
+/// Shows which children of the epic have dependencies on other children of the same epic.
+/// Only intra-epic dependencies are shown; cross-epic or external deps are excluded.
+pub async fn epic_dep_tree(State(state): State<AppState>, Path(id): Path<String>) -> Response {
+    let db = state.db.clone();
+    let result = tokio::task::spawn_blocking(move || -> Result<Vec<EpicDepItem>, String> {
+        let db = db.lock().unwrap();
+        let children = db.get_children(&id)?;
+        let child_ids: std::collections::HashSet<String> =
+            children.iter().map(|c| c.id.clone()).collect();
+
+        let mut items = Vec::new();
+        for child in &children {
+            let all_blockers_deps = db.get_blockers(&child.id)?;
+            let mut intra_blockers = Vec::new();
+            for dep in all_blockers_deps {
+                if child_ids.contains(&dep.parent_id)
+                    && let Some(t) = db.get_task(&dep.parent_id)?
+                {
+                    intra_blockers.push(t);
+                }
+            }
+            if !intra_blockers.is_empty() {
+                items.push(EpicDepItem {
+                    task: child.clone(),
+                    blockers: intra_blockers,
+                });
+            }
+        }
+        Ok(items)
+    })
+    .await
+    .unwrap();
+
+    match result {
+        Ok(items) => render_template(EpicDepTreeTemplate { items }),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("database error: {e}"),
+        )
+            .into_response(),
+    }
+}
+
 /// GET /api/stats — Task statistics (200).
 pub async fn api_stats(State(state): State<AppState>) -> Result<impl IntoResponse, AppError> {
     let db = state.db.clone();

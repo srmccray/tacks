@@ -1,0 +1,33 @@
+{% if items.is_empty() %}
+<p class="dep-tree-empty">No inter-task dependencies in this epic.</p>
+{% else %}
+<ul class="epic-dep-list">
+  {% for item in &items %}
+  <li class="epic-dep-item">
+    <div class="epic-dep-item-header">
+      <span class="badge status-{{ item.task.status }} dep-status-badge">
+        {%- if item.task.status == crate::models::Status::Open -%}○
+        {%- else if item.task.status == crate::models::Status::InProgress -%}◐
+        {%- else if item.task.status == crate::models::Status::Done -%}✓
+        {%- else -%}⊘{%- endif -%}
+      </span>
+      <a href="/tasks/{{ item.task.id }}">{{ item.task.id }}: {{ item.task.title }}</a>
+      <span class="dep-tree-empty" style="font-style:normal">is blocked by:</span>
+    </div>
+    <ul class="epic-dep-blockers">
+      {% for blocker in &item.blockers %}
+      <li class="epic-dep-blocker">
+        <span class="badge status-{{ blocker.status }} dep-status-badge">
+          {%- if blocker.status == crate::models::Status::Open -%}○
+          {%- else if blocker.status == crate::models::Status::InProgress -%}◐
+          {%- else if blocker.status == crate::models::Status::Done -%}✓
+          {%- else -%}⊘{%- endif -%}
+        </span>
+        <a href="/tasks/{{ blocker.id }}">{{ blocker.id }}: {{ blocker.title }}</a>
+      </li>
+      {% endfor %}
+    </ul>
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}

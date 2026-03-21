@@ -38,25 +38,27 @@
   <div class="task-description" data-editable data-field="description" data-task-id="{{ task.id }}">—</div>
   {% endif %}
 
-  {% if !blockers.is_empty() %}
-  <section>
-    <h4>Blocked by</h4>
-    <ul>
-      {% for blocker in blockers %}
-      <li><a href="/tasks/{{ blocker.id }}">{{ blocker.id }}: {{ blocker.title }}</a></li>
-      {% endfor %}
-    </ul>
-  </section>
-  {% endif %}
-
-  {% if !dependents.is_empty() %}
-  <section>
-    <h4>Blocking</h4>
-    <ul>
-      {% for dep in dependents %}
-      <li><a href="/tasks/{{ dep.id }}">{{ dep.id }}: {{ dep.title }}</a></li>
-      {% endfor %}
-    </ul>
+  {% if !blockers.is_empty() || !dependents.is_empty() %}
+  <section class="dep-tree-section">
+    <details>
+      <summary>Dependencies</summary>
+      <div class="dep-tree-subsection">
+        <h4>Blocked by</h4>
+        <div hx-get="/tasks/{{ task.id }}/dep-tree?dir=up"
+             hx-trigger="revealed"
+             hx-swap="innerHTML">
+          <p class="dep-tree-empty">Loading…</p>
+        </div>
+      </div>
+      <div class="dep-tree-subsection">
+        <h4>Blocks</h4>
+        <div hx-get="/tasks/{{ task.id }}/dep-tree?dir=down"
+             hx-trigger="revealed"
+             hx-swap="innerHTML">
+          <p class="dep-tree-empty">Loading…</p>
+        </div>
+      </div>
+    </details>
   </section>
   {% endif %}
 

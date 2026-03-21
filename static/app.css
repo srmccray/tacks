@@ -1888,3 +1888,94 @@ a.view-toggle-btn:focus-visible {
     padding-left: 0.5em;
   }
 }
+
+/* -----------------------------------------------------------------------
+ * Dependency tree section (detail/modal/epic views)
+ * ----------------------------------------------------------------------- */
+.dep-tree-section {
+  margin-top: 1.5rem;
+}
+
+.dep-tree-section summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--pico-color);
+  padding: 0.25rem 0;
+}
+
+.dep-tree-subsection {
+  margin: 0.5rem 0 0.25rem 0;
+}
+
+.dep-tree-subsection h3,
+.dep-tree-subsection h4 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--pico-muted-color);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0.5rem 0 0.25rem 0;
+}
+
+.dep-tree-empty {
+  color: var(--pico-muted-color);
+  font-style: italic;
+  font-size: 0.9em;
+  margin: 0.25rem 0;
+}
+
+.dep-status-badge {
+  font-size: 0.7em;
+  padding: 0.05em 0.4em;
+}
+
+/* Epic intra-dep list */
+.epic-dep-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.epic-dep-item {
+  margin: 0.5rem 0;
+}
+
+.epic-dep-item-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+}
+
+.epic-dep-item-header a {
+  text-decoration: none;
+  color: var(--pico-color);
+}
+
+.epic-dep-item-header a:hover {
+  color: var(--pico-primary);
+}
+
+.epic-dep-blockers {
+  list-style: none;
+  padding: 0;
+  margin: 0.2rem 0 0 1.5rem;
+}
+
+.epic-dep-blocker {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9em;
+  color: var(--pico-muted-color);
+  padding: 0.1rem 0;
+}
+
+.epic-dep-blocker a {
+  color: var(--pico-muted-color);
+  text-decoration: none;
+}
+
+.epic-dep-blocker a:hover {
+  color: var(--pico-primary);
+}

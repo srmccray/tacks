@@ -61,6 +61,17 @@
 <div class="task-description markdown-body">{{ html|safe }}</div>
 {% endif %}
 
+<section class="dep-tree-section">
+  <details>
+    <summary>Task Dependencies</summary>
+    <div hx-get="/epics/{{ task.id }}/dep-tree"
+         hx-trigger="revealed"
+         hx-swap="innerHTML">
+      <p class="dep-tree-empty">Loading…</p>
+    </div>
+  </details>
+</section>
+
 <hr class="view-toggle-divider">
 
 <div class="view-toggle-row">
