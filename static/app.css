@@ -1740,3 +1740,151 @@ a.view-toggle-btn:focus-visible {
   height: auto;
   border-radius: var(--pico-border-radius);
 }
+
+/* ---------------------------------------------------------------------------
+ * Dependency tree view (GET /tasks/:id/dep-tree partial)
+ * --------------------------------------------------------------------------- */
+
+/* Reset ul/li defaults — Pico adds list-style and padding that fight the tree */
+.dep-tree-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  position: relative;
+}
+
+/* Vertical connector line running down the left side of the list */
+.dep-tree-list::before {
+  content: "";
+  position: absolute;
+  left: 0.6em;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  border-left: 2px solid var(--pico-muted-border-color, #c4c9d4);
+}
+
+/* Each node: indented by --depth CSS custom property (set inline in template) */
+.dep-tree-node {
+  position: relative;
+  padding: 0.35em 0.5em 0.35em calc(1.5em + (var(--depth, 1) - 1) * 1.5em);
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  flex-wrap: wrap;
+}
+
+/* Horizontal connector line from the vertical bar to the node */
+.dep-tree-node::before {
+  content: "";
+  position: absolute;
+  left: 0.6em;
+  top: 50%;
+  width: calc(0.9em + (var(--depth, 1) - 1) * 1.5em);
+  height: 1px;
+  border-top: 2px solid var(--pico-muted-border-color, #c4c9d4);
+}
+
+/* Last child: vertical line only goes to the midpoint (no continuation below) */
+.dep-tree-node:last-child::after {
+  content: "";
+  position: absolute;
+  left: 0.6em;
+  top: 50%;
+  bottom: 0;
+  width: 1px;
+  background-color: var(--pico-background-color, #fff);
+}
+
+/* Status indicator dot */
+.dep-status-dot {
+  display: inline-block;
+  width: 0.6em;
+  height: 0.6em;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dep-status-dot.dep-status-open {
+  background-color: #3b82f6;
+}
+
+.dep-status-dot.dep-status-in_progress {
+  background-color: #f59e0b;
+}
+
+.dep-status-dot.dep-status-done {
+  background-color: #22c55e;
+}
+
+.dep-status-dot.dep-status-blocked {
+  background-color: #ef4444;
+}
+
+/* Dark theme status dot overrides */
+[data-theme="dark"] .dep-status-dot.dep-status-open {
+  background-color: #93c5fd;
+}
+
+[data-theme="dark"] .dep-status-dot.dep-status-in_progress {
+  background-color: #fde68a;
+}
+
+[data-theme="dark"] .dep-status-dot.dep-status-done {
+  background-color: #86efac;
+}
+
+[data-theme="dark"] .dep-status-dot.dep-status-blocked {
+  background-color: #fca5a5;
+}
+
+/* Link styling within the tree */
+.dep-tree-link {
+  font-weight: 500;
+}
+
+/* Section header ("Blocked by" / "Blocks") */
+.dep-tree-label {
+  margin: 0.75em 0 0.25em;
+  font-size: 0.85em;
+  color: var(--pico-muted-color, #6b7280);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+/* Section wrapper */
+.dep-tree-section {
+  margin-bottom: 1em;
+}
+
+/* Empty state */
+.dep-tree-empty {
+  color: var(--pico-muted-color, #6b7280);
+  font-style: italic;
+  margin: 0.5em 0;
+}
+
+/* Dark theme: cover line uses dark background */
+[data-theme="dark"] .dep-tree-node:last-child::after {
+  background-color: var(--pico-background-color, #1e1e2e);
+}
+
+/* Dark theme: connector line color */
+[data-theme="dark"] .dep-tree-list::before,
+[data-theme="dark"] .dep-tree-node::before {
+  border-color: var(--pico-muted-border-color, #4b5563);
+}
+
+/* Responsive: hide connector lines on very small screens */
+@media (max-width: 400px) {
+  .dep-tree-list::before,
+  .dep-tree-node::before,
+  .dep-tree-node:last-child::after {
+    display: none;
+  }
+
+  .dep-tree-node {
+    padding-left: 0.5em;
+  }
+}
