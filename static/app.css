@@ -1767,11 +1767,14 @@ a.view-toggle-btn:focus-visible {
 /* Each node: indented by --depth CSS custom property (set inline in template) */
 .dep-tree-node {
   position: relative;
-  padding: 0.35em 0.5em 0.35em calc(1.5em + (var(--depth, 1) - 1) * 1.5em);
+  padding: 0.25em 0.5em 0.25em calc(1.5em + (var(--depth, 1) - 1) * 1.5em);
   display: flex;
   align-items: center;
-  gap: 0.4em;
-  flex-wrap: wrap;
+  gap: 0.35em;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  overflow: hidden;
+  line-height: 1.4;
 }
 
 /* Horizontal connector line from the vertical bar to the node */
@@ -1796,12 +1799,21 @@ a.view-toggle-btn:focus-visible {
   background-color: var(--pico-background-color, #fff);
 }
 
+/* Compact badge override for dep tree nodes */
+.dep-tree-node .badge {
+  font-size: 0.7em;
+  padding: 0.1em 0.4em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 /* Status indicator dot */
 .dep-status-dot {
   display: inline-block;
   width: 0.6em;
   height: 0.6em;
   border-radius: 50%;
+  flex-shrink: 0;
   flex-shrink: 0;
 }
 
@@ -1841,6 +1853,9 @@ a.view-toggle-btn:focus-visible {
 /* Link styling within the tree */
 .dep-tree-link {
   font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 /* Section header ("Blocked by" / "Blocks") */
