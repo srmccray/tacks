@@ -3,11 +3,11 @@
 {% block title %}{{ task.title }} — Epic — Tacks{% endblock %}
 
 {% block content %}
-<div id="content-area"
+<div id="content-area">
+<div id="content-inner"
      hx-get="/epics/{{ task.id }}?view={{ view }}"
      hx-trigger="every 2s [document.visibilityState === 'visible']"
-     hx-target="this"
-     hx-select="#content-area"
+     hx-select="#content-inner"
      hx-swap="outerHTML show:none"
      aria-live="polite"
      aria-atomic="false">
@@ -209,5 +209,6 @@
 
 {% endif %}
 
+</div>
 </div>
 {% endblock %}
