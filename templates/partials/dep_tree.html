@@ -1,0 +1,36 @@
+{% if up_nodes.is_empty() && down_nodes.is_empty() %}
+<p class="dep-tree-empty">No dependencies</p>
+{% else %}
+<div class="dep-tree" data-dir="{{ dir }}">
+  {% if !up_nodes.is_empty() %}
+  <div class="dep-tree-section">
+    {% if dir == "both" %}<h4 class="dep-tree-label">Blocked by</h4>{% endif %}
+    <ul class="dep-tree-list">
+      {% for node in &up_nodes %}
+      <li class="dep-tree-node" style="--depth: {{ node.depth }}">
+        <span class="dep-status-dot dep-status-{{ node.task.status }}"></span>
+        <span class="badge priority-{{ node.task.priority }}">P{{ node.task.priority }}</span>
+        <a href="/tasks/{{ node.task.id }}" class="dep-tree-link">{{ node.task.id }}: {{ node.task.title }}</a>
+        <span class="badge status-{{ node.task.status }}">{{ node.task.status }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+  {% if !down_nodes.is_empty() %}
+  <div class="dep-tree-section">
+    {% if dir == "both" %}<h4 class="dep-tree-label">Blocks</h4>{% endif %}
+    <ul class="dep-tree-list">
+      {% for node in &down_nodes %}
+      <li class="dep-tree-node" style="--depth: {{ node.depth }}">
+        <span class="dep-status-dot dep-status-{{ node.task.status }}"></span>
+        <span class="badge priority-{{ node.task.priority }}">P{{ node.task.priority }}</span>
+        <a href="/tasks/{{ node.task.id }}" class="dep-tree-link">{{ node.task.id }}: {{ node.task.title }}</a>
+        <span class="badge status-{{ node.task.status }}">{{ node.task.status }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+</div>
+{% endif %}

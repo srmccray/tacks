@@ -1706,6 +1706,170 @@ pub async fn api_tags(State(state): State<AppState>) -> Result<impl IntoResponse
     Ok(Json(tags))
 }
 
+// ---------------------------------------------------------------------------
+// Dependency tree partial
+// ---------------------------------------------------------------------------
+
+/// A single node in the dependency tree, with pre-computed depth for CSS indentation.
+#[allow(dead_code)]
+struct DepTreeNode {
+    task: Task,
+    /// BFS depth from the root task (1 = direct dep, 2 = transitive, etc.).
+    depth: usize,
+}
+
+/// Template for the GET /tasks/:id/dep-tree partial.
+#[derive(Template)]
+#[template(path = "partials/dep_tree.html")]
+#[allow(dead_code)]
+struct DepTreeTemplate {
+    /// Nodes in the "blocked by" (upstream) direction.
+    up_nodes: Vec<DepTreeNode>,
+    /// Nodes in the "blocks" (downstream) direction.
+    down_nodes: Vec<DepTreeNode>,
+    /// Direction query param value ("up", "down", or "both").
+    dir: String,
+}
+
+/// Query parameters for GET /tasks/:id/dep-tree.
+#[derive(Debug, Deserialize)]
+pub struct DepTreeQuery {
+    /// Direction: "up" (blockers), "down" (dependents), or "both" (default).
+    pub dir: Option<String>,
+}
+
+/// BFS traversal: collect all transitive dependencies in one direction.
+///
+/// `direction` is either "up" (follow blockers) or "down" (follow dependents).
+/// Returns nodes ordered by BFS level (depth 1 first), then by task priority.
+fn bfs_deps(
+    db: &crate::db::Database,
+    root_id: &str,
+    direction: &str,
+) -> Result<Vec<DepTreeNode>, String> {
+    use std::collections::{HashSet, VecDeque};
+
+    let mut visited: HashSet<String> = HashSet::new();
+    visited.insert(root_id.to_string());
+
+    let mut queue: VecDeque<(String, usize)> = VecDeque::new();
+    let mut nodes: Vec<DepTreeNode> = Vec::new();
+
+    // Seed queue with direct deps at depth 1.
+    let direct: Vec<Task> = if direction == "up" {
+        let deps = db.get_blockers(root_id)?;
+        let mut tasks = Vec::with_capacity(deps.len());
+        for dep in deps {
+            if let Some(t) = db.get_task(&dep.parent_id)? {
+                tasks.push(t);
+            }
+        }
+        tasks
+    } else {
+        db.get_dependents(root_id)?
+    };
+
+    for task in direct {
+        if visited.insert(task.id.clone()) {
+            queue.push_back((task.id.clone(), 1));
+            nodes.push(DepTreeNode { task, depth: 1 });
+        }
+    }
+
+    // BFS: expand each node's children.
+    while let Some((id, depth)) = queue.pop_front() {
+        let next_depth = depth + 1;
+        let nexts: Vec<Task> = if direction == "up" {
+            let deps = db.get_blockers(&id)?;
+            let mut tasks = Vec::with_capacity(deps.len());
+            for dep in deps {
+                if let Some(t) = db.get_task(&dep.parent_id)? {
+                    tasks.push(t);
+                }
+            }
+            tasks
+        } else {
+            db.get_dependents(&id)?
+        };
+
+        for task in nexts {
+            if visited.insert(task.id.clone()) {
+                queue.push_back((task.id.clone(), next_depth));
+                nodes.push(DepTreeNode {
+                    task,
+                    depth: next_depth,
+                });
+            }
+        }
+    }
+
+    Ok(nodes)
+}
+
+/// GET /tasks/:id/dep-tree — Dependency tree HTML partial.
+///
+/// Returns a nested HTML partial showing a task's dependency graph.
+/// The `?dir` query parameter controls direction:
+/// - `up`: show tasks that block this task (blockers)
+/// - `down`: show tasks that this task blocks (dependents)
+/// - `both` (default): show both directions with section headers
+pub async fn task_dep_tree(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    Query(query): Query<DepTreeQuery>,
+) -> Response {
+    let dir = query
+        .dir
+        .as_deref()
+        .and_then(|d| match d {
+            "up" | "down" | "both" => Some(d),
+            _ => None,
+        })
+        .unwrap_or("both")
+        .to_string();
+    let dir_clone = dir.clone();
+
+    let db = state.db.clone();
+    let result = tokio::task::spawn_blocking(move || -> Result<Option<DepTreeTemplate>, String> {
+        let db = db.lock().unwrap();
+
+        // Verify task exists.
+        if db.get_task(&id)?.is_none() {
+            return Ok(None);
+        }
+
+        let up_nodes = if dir_clone == "up" || dir_clone == "both" {
+            bfs_deps(&db, &id, "up")?
+        } else {
+            vec![]
+        };
+
+        let down_nodes = if dir_clone == "down" || dir_clone == "both" {
+            bfs_deps(&db, &id, "down")?
+        } else {
+            vec![]
+        };
+
+        Ok(Some(DepTreeTemplate {
+            up_nodes,
+            down_nodes,
+            dir: dir_clone,
+        }))
+    })
+    .await
+    .unwrap();
+
+    match result {
+        Ok(Some(tmpl)) => render_template(tmpl),
+        Ok(None) => (StatusCode::NOT_FOUND, "task not found").into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("database error: {e}"),
+        )
+            .into_response(),
+    }
+}
+
 /// GET /api/stats — Task statistics (200).
 pub async fn api_stats(State(state): State<AppState>) -> Result<impl IntoResponse, AppError> {
     let db = state.db.clone();

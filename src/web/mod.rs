@@ -111,6 +111,7 @@ pub fn create_router(state: AppState) -> Router {
         .route("/", get(handlers::index))
         .route("/tasks/new", get(handlers::task_new))
         .route("/tasks/new/modal", get(handlers::task_create_modal))
+        .route("/tasks/{id}/dep-tree", get(handlers::task_dep_tree))
         .route("/tasks/{id}", get(handlers::task_detail))
         .route(
             "/tasks",
