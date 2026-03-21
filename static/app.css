@@ -568,6 +568,25 @@ nav.nav-tabs ul:last-child li a.nav-active {
   background-color: color-mix(in srgb, var(--pico-primary, #a78bfa) 25%, transparent);
 }
 
+/* Dependency-blocked badge — shown inline with task title when task has open blockers */
+.badge.dep-blocked {
+  background-color: color-mix(in srgb, #ef4444 20%, transparent);
+  color: #991b1b;
+  font-size: 0.72em;
+  vertical-align: middle;
+  cursor: default;
+}
+
+[data-theme="dark"] .badge.dep-blocked {
+  background-color: color-mix(in srgb, #ef4444 30%, transparent);
+  color: #fca5a5;
+}
+
+/* Container for the dep-blocked badge on board cards */
+.board-card-blocked {
+  margin-top: 0.3em;
+}
+
 [data-theme="dark"] .meta-sep {
   color: var(--pico-muted-border-color, #374151);
 }

@@ -782,15 +782,18 @@ struct TaskRow {
     children_done: usize,
     /// Total number of subtasks (0 if this task has no children).
     children_total: usize,
+    /// Number of open (non-done) blockers for this task.
+    blocked_count: usize,
 }
 
 impl TaskRow {
-    /// Build a `TaskRow` from a task, looking up parent title from the provided map
-    /// and child counts from the provided counts map.
+    /// Build a `TaskRow` from a task, looking up parent title from the provided map,
+    /// child counts from the provided counts map, and blocker counts from the blocker map.
     fn from_task(
         task: Task,
         parents: &std::collections::HashMap<String, Task>,
         child_counts: &std::collections::HashMap<String, (usize, usize)>,
+        blocker_counts: &std::collections::HashMap<String, usize>,
     ) -> Self {
         let parent_id = task.parent_id.clone();
         let parent_title = parent_id
@@ -798,12 +801,14 @@ impl TaskRow {
             .and_then(|pid| parents.get(pid))
             .map(|p| p.title.clone());
         let (children_done, children_total) = child_counts.get(&task.id).copied().unwrap_or((0, 0));
+        let blocked_count = blocker_counts.get(&task.id).copied().unwrap_or(0);
         TaskRow {
             task,
             parent_id,
             parent_title,
             children_done,
             children_total,
+            blocked_count,
         }
     }
 }
@@ -840,6 +845,33 @@ fn fetch_child_counts(
                 .filter(|c| matches!(c.status, crate::models::Status::Done))
                 .count();
             map.insert(id.clone(), (done, children.len()));
+        }
+    }
+    Ok(map)
+}
+
+/// Batch-fetch the count of open (non-done) blockers for a list of task IDs.
+///
+/// Returns a map of `task_id -> open_blocker_count` for tasks that have at least one
+/// open blocker.  Tasks with no open blockers are absent from the map (callers should
+/// default to `0`).
+fn fetch_blocker_counts(
+    db: &crate::db::Database,
+    task_ids: &[String],
+) -> Result<std::collections::HashMap<String, usize>, String> {
+    let mut map = std::collections::HashMap::new();
+    for id in task_ids {
+        let blocker_deps = db.get_blockers(id)?;
+        let mut open_count = 0usize;
+        for dep in &blocker_deps {
+            if let Some(blocker) = db.get_task(&dep.parent_id)?
+                && !matches!(blocker.status, crate::models::Status::Done)
+            {
+                open_count += 1;
+            }
+        }
+        if open_count > 0 {
+            map.insert(id.clone(), open_count);
         }
     }
     Ok(map)
@@ -1103,9 +1135,10 @@ pub async fn task_list(
             // Batch-fetch child counts so we can show subtask progress on parent tasks
             let task_ids: Vec<String> = tasks.iter().map(|t| t.id.clone()).collect();
             let child_counts = fetch_child_counts(&db, &task_ids)?;
+            let blocker_counts = fetch_blocker_counts(&db, &task_ids)?;
             let rows: Vec<TaskRow> = tasks
                 .into_iter()
-                .map(|t| TaskRow::from_task(t, &parents, &child_counts))
+                .map(|t| TaskRow::from_task(t, &parents, &child_counts, &blocker_counts))
                 .collect();
             // Fetch all tags for the dropdown
             let all_tags: Vec<String> = db
@@ -1426,10 +1459,19 @@ pub async fn board(State(state): State<AppState>, Query(query): Query<BoardQuery
 
         // Board cards don't show child counts — pass empty map so from_task defaults to (0, 0)
         let empty_child_counts = std::collections::HashMap::new();
+        // Batch-fetch blocker counts for all tasks across all columns
+        let all_board_ids: Vec<String> = open_raw_filtered
+            .iter()
+            .chain(in_progress_raw.iter())
+            .chain(blocked_raw.iter())
+            .chain(done_raw.iter())
+            .map(|t| t.id.clone())
+            .collect();
+        let blocker_counts = fetch_blocker_counts(&db, &all_board_ids)?;
         let to_rows = |tasks: Vec<Task>| -> Vec<TaskRow> {
             tasks
                 .into_iter()
-                .map(|t| TaskRow::from_task(t, &parents, &empty_child_counts))
+                .map(|t| TaskRow::from_task(t, &parents, &empty_child_counts, &blocker_counts))
                 .collect()
         };
 

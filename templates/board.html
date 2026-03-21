@@ -64,6 +64,11 @@
           {%- if row.task.priority == 1 -%}▲ P1{%- else if row.task.priority == 2 -%}▬ P2{%- else if row.task.priority == 3 -%}▽ P3{%- else -%}· P4{%- endif -%}
         </span>
       </div>
+      {% if row.blocked_count > 0 %}
+      <div class="board-card-blocked">
+        <span class="badge dep-blocked" title="Blocked by {{ row.blocked_count }} {% if row.blocked_count == 1 %}task{% else %}tasks{% endif %}" aria-label="Blocked by {{ row.blocked_count }} {% if row.blocked_count == 1 %}task{% else %}tasks{% endif %}">⊘ Blocked</span>
+      </div>
+      {% endif %}
     </article>
     {% endfor %}
   </div>
@@ -81,6 +86,11 @@
           {%- if row.task.priority == 1 -%}▲ P1{%- else if row.task.priority == 2 -%}▬ P2{%- else if row.task.priority == 3 -%}▽ P3{%- else -%}· P4{%- endif -%}
         </span>
       </div>
+      {% if row.blocked_count > 0 %}
+      <div class="board-card-blocked">
+        <span class="badge dep-blocked" title="Blocked by {{ row.blocked_count }} {% if row.blocked_count == 1 %}task{% else %}tasks{% endif %}" aria-label="Blocked by {{ row.blocked_count }} {% if row.blocked_count == 1 %}task{% else %}tasks{% endif %}">⊘ Blocked</span>
+      </div>
+      {% endif %}
     </article>
     {% endfor %}
   </div>
@@ -98,6 +108,11 @@
           {%- if row.task.priority == 1 -%}▲ P1{%- else if row.task.priority == 2 -%}▬ P2{%- else if row.task.priority == 3 -%}▽ P3{%- else -%}· P4{%- endif -%}
         </span>
       </div>
+      {% if row.blocked_count > 0 %}
+      <div class="board-card-blocked">
+        <span class="badge dep-blocked" title="Blocked by {{ row.blocked_count }} {% if row.blocked_count == 1 %}task{% else %}tasks{% endif %}" aria-label="Blocked by {{ row.blocked_count }} {% if row.blocked_count == 1 %}task{% else %}tasks{% endif %}">⊘ Blocked</span>
+      </div>
+      {% endif %}
     </article>
     {% endfor %}
   </div>
@@ -115,6 +130,11 @@
           {%- if row.task.priority == 1 -%}▲ P1{%- else if row.task.priority == 2 -%}▬ P2{%- else if row.task.priority == 3 -%}▽ P3{%- else -%}· P4{%- endif -%}
         </span>
       </div>
+      {% if row.blocked_count > 0 %}
+      <div class="board-card-blocked">
+        <span class="badge dep-blocked" title="Blocked by {{ row.blocked_count }} {% if row.blocked_count == 1 %}task{% else %}tasks{% endif %}" aria-label="Blocked by {{ row.blocked_count }} {% if row.blocked_count == 1 %}task{% else %}tasks{% endif %}">⊘ Blocked</span>
+      </div>
+      {% endif %}
     </article>
     {% endfor %}
   </div>
