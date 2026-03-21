@@ -783,6 +783,118 @@ impl Database {
         Ok(tasks)
     }
 
+    /// Traverse the dependency graph from a starting task and return all reachable tasks with depth.
+    ///
+    /// `direction` controls which edges are followed:
+    /// - `"up"` — follows blocker edges (what does this task depend on, transitively)
+    /// - `"down"` — follows dependent edges (what tasks depend on this task, transitively)
+    /// - `"both"` — follows both directions
+    ///
+    /// The root task itself (depth 0) is **not** included in the result — the caller already holds it.
+    /// All other reachable tasks are returned at their BFS depth (minimum hops from root), ordered
+    /// breadth-first. Diamond dependencies are handled correctly: a task reachable via multiple paths
+    /// appears only once, at the shallowest depth at which it was first discovered.
+    ///
+    /// A visited set guards against infinite loops even though cycles are rejected at write time.
+    pub fn get_dependency_chain(
+        &self,
+        task_id: &str,
+        direction: &str,
+    ) -> Result<Vec<(Task, usize)>, String> {
+        use std::collections::{HashSet, VecDeque};
+
+        if direction != "up" && direction != "down" && direction != "both" {
+            return Err(format!(
+                "invalid direction '{direction}': must be 'up', 'down', or 'both'"
+            ));
+        }
+
+        // Helper: fetch direct blocker IDs for a given task (up direction)
+        let fetch_up = |current: &str| -> Result<Vec<String>, String> {
+            let mut stmt = self
+                .conn
+                .prepare("SELECT parent_id FROM dependencies WHERE child_id = ?1")
+                .map_err(|e| format!("query error: {e}"))?;
+            let ids: Vec<String> = stmt
+                .query_map(params![current], |row| row.get::<_, String>(0))
+                .map_err(|e| format!("query error: {e}"))?
+                .filter_map(|r| r.ok())
+                .collect();
+            Ok(ids)
+        };
+
+        // Helper: fetch direct dependent IDs for a given task (down direction)
+        let fetch_down = |current: &str| -> Result<Vec<String>, String> {
+            let mut stmt = self
+                .conn
+                .prepare("SELECT child_id FROM dependencies WHERE parent_id = ?1")
+                .map_err(|e| format!("query error: {e}"))?;
+            let ids: Vec<String> = stmt
+                .query_map(params![current], |row| row.get::<_, String>(0))
+                .map_err(|e| format!("query error: {e}"))?
+                .filter_map(|r| r.ok())
+                .collect();
+            Ok(ids)
+        };
+
+        // BFS in one direction; returns (id, depth) pairs ordered by discovery
+        let bfs = |start: &str, go_up: bool| -> Result<Vec<(String, usize)>, String> {
+            let mut visited: HashSet<String> = HashSet::new();
+            let mut queue: VecDeque<(String, usize)> = VecDeque::new();
+            let mut result: Vec<(String, usize)> = Vec::new();
+
+            visited.insert(start.to_string());
+            queue.push_back((start.to_string(), 0));
+
+            while let Some((current, depth)) = queue.pop_front() {
+                let neighbors = if go_up {
+                    fetch_up(&current)?
+                } else {
+                    fetch_down(&current)?
+                };
+
+                for neighbor in neighbors {
+                    if !visited.contains(&neighbor) {
+                        visited.insert(neighbor.clone());
+                        result.push((neighbor.clone(), depth + 1));
+                        queue.push_back((neighbor, depth + 1));
+                    }
+                }
+            }
+
+            Ok(result)
+        };
+
+        // Collect (id, depth) pairs according to direction, deduplicating for "both"
+        let id_depth_pairs: Vec<(String, usize)> = match direction {
+            "up" => bfs(task_id, true)?,
+            "down" => bfs(task_id, false)?,
+            "both" => {
+                let mut seen: HashSet<String> = HashSet::new();
+                let mut combined: Vec<(String, usize)> = Vec::new();
+
+                for (id, depth) in bfs(task_id, true)?.into_iter().chain(bfs(task_id, false)?) {
+                    if !seen.contains(&id) {
+                        seen.insert(id.clone());
+                        combined.push((id, depth));
+                    }
+                }
+                combined
+            }
+            _ => unreachable!(),
+        };
+
+        // Resolve IDs to Task structs
+        let mut result = Vec::with_capacity(id_depth_pairs.len());
+        for (id, depth) in id_depth_pairs {
+            if let Some(task) = self.get_task(&id)? {
+                result.push((task, depth));
+            }
+        }
+
+        Ok(result)
+    }
+
     /// Recalculate and update an epic's status based on its children's statuses.
     ///
     /// - All children open/blocked → epic status = open
@@ -980,5 +1092,166 @@ fn row_to_task(row: &rusqlite::Row) -> Task {
             .unwrap_or_else(|_| Utc::now()),
         close_reason,
         notes,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    /// Create an in-memory-like temp database and return it along with the TempDir
+    /// (must keep TempDir alive for the test's duration).
+    fn open_test_db() -> (Database, TempDir) {
+        let dir = TempDir::new().expect("tempdir");
+        let db_path = dir.path().join("test.db");
+        let db = Database::open(&db_path).expect("open");
+        db.migrate().expect("migrate");
+        db.set_config("prefix", "tk").expect("set prefix");
+        (db, dir)
+    }
+
+    fn make_task(db: &Database, title: &str) -> Task {
+        let id = db.generate_id().expect("generate_id");
+        let now = Utc::now();
+        let task = Task {
+            id,
+            title: title.to_string(),
+            description: None,
+            status: crate::models::Status::Open,
+            priority: 2,
+            assignee: None,
+            parent_id: None,
+            tags: Vec::new(),
+            created_at: now,
+            updated_at: now,
+            close_reason: None,
+            notes: None,
+        };
+        db.insert_task(&task).expect("insert_task");
+        task
+    }
+
+    #[test]
+    fn test_dependency_chain_empty_no_deps() {
+        let (db, _dir) = open_test_db();
+        let a = make_task(&db, "A");
+
+        let up = db.get_dependency_chain(&a.id, "up").expect("chain up");
+        let down = db.get_dependency_chain(&a.id, "down").expect("chain down");
+        let both = db.get_dependency_chain(&a.id, "both").expect("chain both");
+
+        assert!(up.is_empty(), "no blockers expected");
+        assert!(down.is_empty(), "no dependents expected");
+        assert!(both.is_empty(), "no connections expected");
+    }
+
+    #[test]
+    fn test_dependency_chain_single_dep() {
+        // A is blocked by B (A depends on B)
+        let (db, _dir) = open_test_db();
+        let a = make_task(&db, "A");
+        let b = make_task(&db, "B");
+        db.add_dependency(&a.id, &b.id).expect("add dep A->B");
+
+        let up = db.get_dependency_chain(&a.id, "up").expect("chain up");
+        assert_eq!(up.len(), 1, "A has one blocker");
+        assert_eq!(up[0].0.id, b.id);
+        assert_eq!(up[0].1, 1, "depth should be 1");
+
+        let down = db.get_dependency_chain(&b.id, "down").expect("chain down");
+        assert_eq!(down.len(), 1, "B has one dependent");
+        assert_eq!(down[0].0.id, a.id);
+        assert_eq!(down[0].1, 1, "depth should be 1");
+    }
+
+    #[test]
+    fn test_dependency_chain_linear_chain() {
+        // C is blocked by B, B is blocked by A
+        // Up from C: [B@1, A@2]
+        // Down from A: [B@1, C@2]
+        let (db, _dir) = open_test_db();
+        let a = make_task(&db, "A");
+        let b = make_task(&db, "B");
+        let c = make_task(&db, "C");
+        db.add_dependency(&b.id, &a.id).expect("B dep A");
+        db.add_dependency(&c.id, &b.id).expect("C dep B");
+
+        let up_from_c = db.get_dependency_chain(&c.id, "up").expect("up from C");
+        assert_eq!(up_from_c.len(), 2);
+        // BFS order: B at depth 1, A at depth 2
+        let b_entry = up_from_c.iter().find(|(t, _)| t.id == b.id).expect("B");
+        let a_entry = up_from_c.iter().find(|(t, _)| t.id == a.id).expect("A");
+        assert_eq!(b_entry.1, 1);
+        assert_eq!(a_entry.1, 2);
+
+        let down_from_a = db.get_dependency_chain(&a.id, "down").expect("down from A");
+        assert_eq!(down_from_a.len(), 2);
+        let b_entry = down_from_a.iter().find(|(t, _)| t.id == b.id).expect("B");
+        let c_entry = down_from_a.iter().find(|(t, _)| t.id == c.id).expect("C");
+        assert_eq!(b_entry.1, 1);
+        assert_eq!(c_entry.1, 2);
+    }
+
+    #[test]
+    fn test_dependency_chain_diamond() {
+        // Diamond: A and B both depend on X.
+        // C depends on A and B.
+        // Graph (up): C -> A -> X, C -> B -> X
+        //             X should appear only once in "up from C"
+        let (db, _dir) = open_test_db();
+        let x = make_task(&db, "X");
+        let a = make_task(&db, "A");
+        let b = make_task(&db, "B");
+        let c = make_task(&db, "C");
+        db.add_dependency(&a.id, &x.id).expect("A dep X");
+        db.add_dependency(&b.id, &x.id).expect("B dep X");
+        db.add_dependency(&c.id, &a.id).expect("C dep A");
+        db.add_dependency(&c.id, &b.id).expect("C dep B");
+
+        let up_from_c = db.get_dependency_chain(&c.id, "up").expect("up from C");
+
+        // Should contain A, B (depth 1) and X (depth 2) — X only once
+        assert_eq!(up_from_c.len(), 3, "A, B, X — X appears only once");
+
+        let ids: Vec<&str> = up_from_c.iter().map(|(t, _)| t.id.as_str()).collect();
+        assert!(ids.contains(&a.id.as_str()));
+        assert!(ids.contains(&b.id.as_str()));
+        assert!(ids.contains(&x.id.as_str()));
+
+        // X appears exactly once
+        let x_count = up_from_c.iter().filter(|(t, _)| t.id == x.id).count();
+        assert_eq!(x_count, 1, "X must appear exactly once (diamond dedup)");
+
+        // X depth should be 2 (reached via A or B)
+        let x_depth = up_from_c.iter().find(|(t, _)| t.id == x.id).unwrap().1;
+        assert_eq!(x_depth, 2);
+    }
+
+    #[test]
+    fn test_dependency_chain_invalid_direction() {
+        let (db, _dir) = open_test_db();
+        let a = make_task(&db, "A");
+        let result = db.get_dependency_chain(&a.id, "sideways");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("invalid direction"));
+    }
+
+    #[test]
+    fn test_dependency_chain_both_direction() {
+        // B depends on A, C depends on B
+        // From B with "both": should see A (up@1) and C (down@1)
+        let (db, _dir) = open_test_db();
+        let a = make_task(&db, "A");
+        let b = make_task(&db, "B");
+        let c = make_task(&db, "C");
+        db.add_dependency(&b.id, &a.id).expect("B dep A");
+        db.add_dependency(&c.id, &b.id).expect("C dep B");
+
+        let both = db.get_dependency_chain(&b.id, "both").expect("both");
+        assert_eq!(both.len(), 2);
+        let ids: Vec<&str> = both.iter().map(|(t, _)| t.id.as_str()).collect();
+        assert!(ids.contains(&a.id.as_str()));
+        assert!(ids.contains(&c.id.as_str()));
     }
 }
