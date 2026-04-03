@@ -195,7 +195,11 @@
     {% endfor %}
   </div>
   <div class="board-column" data-status="done">
-    <h3>Done <span class="column-count">({{ board_done_count }})</span></h3>
+    <h3>
+      <button class="column-collapse-toggle" data-column="done" data-storage-key="epic-board-done-collapsed-{{ task.id }}" aria-label="Toggle done column">&#9660;</button>
+      Done <span class="column-count">({{ board_done_count }})</span>
+    </h3>
+    <div class="column-cards">
     {% for child in &children %}
     {%- if child.status == crate::models::Status::Done -%}
     <article class="board-card" draggable="true" data-task-id="{{ child.id }}">
@@ -212,6 +216,7 @@
     </article>
     {%- endif -%}
     {% endfor %}
+    </div>
   </div>
 </div>
 {% endif %}

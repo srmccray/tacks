@@ -126,7 +126,11 @@
     {% endfor %}
   </div>
   <div class="board-column" data-status="done">
-    <h2>Done <span class="column-count">({{ done_tasks.len() }})</span></h2>
+    <h2>
+      <button class="column-collapse-toggle" data-column="done" data-storage-key="board-done-collapsed" aria-label="Toggle done column">&#9660;</button>
+      Done <span class="column-count">({{ done_tasks.len() }})</span>
+    </h2>
+    <div class="column-cards">
     {% for row in done_tasks %}
     <article class="board-card" draggable="true" data-task-id="{{ row.task.id }}" tabindex="0" data-shortcut="Shift+← to move left">
       <div class="board-card-header">
@@ -146,6 +150,7 @@
       {% endif %}
     </article>
     {% endfor %}
+    </div>
   </div>
 </div>
 {% if open_tasks.is_empty() && in_progress_tasks.is_empty() && blocked_tasks.is_empty() && done_tasks.is_empty() %}

@@ -2038,3 +2038,25 @@ a.view-toggle-btn:focus-visible {
 .epic-dep-blocker a:hover {
   color: var(--pico-primary);
 }
+
+/* Column collapse toggle button */
+.column-collapse-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 0.25rem;
+  font-size: 0.75em;
+  opacity: 0.5;
+  line-height: 1;
+  vertical-align: middle;
+  color: inherit;
+}
+
+.column-collapse-toggle:hover {
+  opacity: 1;
+}
+
+.column-collapse-toggle:focus-visible {
+  outline: 2px solid var(--pico-primary-focus, rgba(124, 58, 237, 0.375));
+  border-radius: 2px;
+}

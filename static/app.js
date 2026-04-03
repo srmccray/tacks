@@ -992,6 +992,60 @@
     }
   });
 
+  // --- Column collapse toggle ---
+
+  /**
+   * Initialize collapse/expand toggle buttons on board Done columns.
+   * State persists in localStorage keyed by data-storage-key attribute.
+   * Re-run after every HTMX poll to re-apply stored state.
+   */
+  function initColumnCollapse() {
+    document.querySelectorAll('.column-collapse-toggle').forEach(function (btn) {
+      // Skip if already wired (listener registered flag)
+      if (btn.dataset.collapseWired) return;
+      btn.dataset.collapseWired = 'true';
+
+      btn.addEventListener('click', function () {
+        var column = btn.closest('.board-column');
+        var cards = column && column.querySelector('.column-cards');
+        if (!cards) return;
+        var storageKey = btn.dataset.storageKey || 'board-done-collapsed';
+        var isCollapsed = cards.style.display === 'none';
+        if (isCollapsed) {
+          cards.style.display = '';
+          btn.innerHTML = '&#9660;';
+          btn.setAttribute('aria-label', 'Collapse done column');
+          localStorage.setItem(storageKey, 'false');
+        } else {
+          cards.style.display = 'none';
+          btn.innerHTML = '&#9654;';
+          btn.setAttribute('aria-label', 'Expand done column');
+          localStorage.setItem(storageKey, 'true');
+        }
+      });
+    });
+
+    // Restore state for all collapse toggles (runs after every HTMX swap)
+    document.querySelectorAll('.column-collapse-toggle').forEach(function (btn) {
+      var storageKey = btn.dataset.storageKey || 'board-done-collapsed';
+      var column = btn.closest('.board-column');
+      var cards = column && column.querySelector('.column-cards');
+      if (!cards) return;
+      if (localStorage.getItem(storageKey) === 'true') {
+        cards.style.display = 'none';
+        btn.innerHTML = '&#9654;';
+        btn.setAttribute('aria-label', 'Expand done column');
+      } else {
+        cards.style.display = '';
+        btn.innerHTML = '&#9660;';
+        btn.setAttribute('aria-label', 'Collapse done column');
+      }
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', initColumnCollapse);
+  document.addEventListener('htmx:afterSettle', initColumnCollapse);
+
   // --- Inline editing ---
 
   // Track elements currently being edited to avoid double-saves.
