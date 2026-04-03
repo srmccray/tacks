@@ -5,7 +5,7 @@
 {% block content %}
 <div id="content-area">
 <div id="content-inner"
-     hx-get="/epics/{{ task.id }}?view={{ view }}"
+     hx-get="/epics/{{ task.id }}{{ poll_query }}"
      hx-trigger="every 2s [document.visibilityState === 'visible']"
      hx-select="#content-inner"
      hx-swap="outerHTML show:none"
