@@ -38,15 +38,12 @@
       </ul>
       <input type="hidden" name="priority" id="board-priority-hidden-input" value="{{ selected_priority }}">
     </div>
-    <label class="filter-select-label" for="board-done-since-select">
-      Done since
-      <select name="done_since" id="board-done-since-select" aria-label="Filter done tasks by time range">
-        <option value="7d" {% if done_since == "7d" %}selected{% endif %}>Last 7 days</option>
-        <option value="14d" {% if done_since == "14d" %}selected{% endif %}>Last 14 days</option>
-        <option value="30d" {% if done_since == "30d" %}selected{% endif %}>Last 30 days</option>
-        <option value="all" {% if done_since == "all" %}selected{% endif %}>All time</option>
-      </select>
-    </label>
+    <select name="done_since" id="board-done-since-select" aria-label="Filter done tasks by time range">
+      <option value="7d" {% if done_since == "7d" %}selected{% endif %}>Done: last 7 days</option>
+      <option value="14d" {% if done_since == "14d" %}selected{% endif %}>Done: last 14 days</option>
+      <option value="30d" {% if done_since == "30d" %}selected{% endif %}>Done: last 30 days</option>
+      <option value="all" {% if done_since == "all" %}selected{% endif %}>Done: all time</option>
+    </select>
     <noscript><button type="submit">Filter</button></noscript>
   </div>
 </form>

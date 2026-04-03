@@ -74,24 +74,21 @@
     {% endif %}
   </div>
   {% if view == "board" %}
-  <label class="filter-select-label" for="epic-done-since-select">
-    Done since
-    <select name="done_since" id="epic-done-since-select"
-            aria-label="Filter done tasks by time range"
-            hx-get="/epics/{{ task.id }}"
-            hx-target="#content-inner"
-            hx-select="#content-inner"
-            hx-swap="outerHTML show:none"
-            hx-include="[name='done_since']"
-            hx-vals='{"view": "board"}'
-            hx-trigger="change"
-            hx-push-url="true">
-      <option value="7d" {% if done_since == "7d" %}selected{% endif %}>Last 7 days</option>
-      <option value="14d" {% if done_since == "14d" %}selected{% endif %}>Last 14 days</option>
-      <option value="30d" {% if done_since == "30d" %}selected{% endif %}>Last 30 days</option>
-      <option value="all" {% if done_since == "all" %}selected{% endif %}>All time</option>
-    </select>
-  </label>
+  <select name="done_since" id="epic-done-since-select"
+          aria-label="Filter done tasks by time range"
+          hx-get="/epics/{{ task.id }}"
+          hx-target="#content-inner"
+          hx-select="#content-inner"
+          hx-swap="outerHTML show:none"
+          hx-include="[name='done_since']"
+          hx-vals='{"view": "board"}'
+          hx-trigger="change"
+          hx-push-url="true">
+    <option value="7d" {% if done_since == "7d" %}selected{% endif %}>Done: last 7 days</option>
+    <option value="14d" {% if done_since == "14d" %}selected{% endif %}>Done: last 14 days</option>
+    <option value="30d" {% if done_since == "30d" %}selected{% endif %}>Done: last 30 days</option>
+    <option value="all" {% if done_since == "all" %}selected{% endif %}>Done: all time</option>
+  </select>
   {% endif %}
 </div>
 

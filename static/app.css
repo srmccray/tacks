@@ -654,6 +654,8 @@ nav.nav-tabs ul:last-child li a.nav-active {
 .view-toggle-row {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  gap: 1rem;
   margin-bottom: 1rem;
 }
 
@@ -1104,6 +1106,27 @@ td[data-editable]:not(.editing) {
 .compact-form .grid {
   row-gap: 0;
 }
+
+/* Filter bar: bottom-align controls so selects match multiselect trigger height. */
+form .grid {
+  align-items: end;
+}
+
+/* Strip Pico's default bottom margin on form controls inside the filter bar
+   so selects, inputs, and search containers align with multiselect triggers. */
+form .grid > select,
+form .grid input,
+form .grid > [role="search"] {
+  margin-bottom: 0;
+}
+
+/* Epic detail: constrain the done-since select next to the view toggle. */
+.view-toggle-row > select {
+  width: auto;
+  max-width: 14rem;
+  margin-bottom: 0;
+}
+
 
 /* Modal footer: side-by-side buttons */
 .modal-actions {
