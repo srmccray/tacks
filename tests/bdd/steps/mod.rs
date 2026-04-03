@@ -1,5 +1,6 @@
 pub mod agent_steps;
 pub mod blocked_steps;
+pub mod board_done_filter_steps;
 pub mod children_steps;
 pub mod close_guard_steps;
 pub mod common_steps;
