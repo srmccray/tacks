@@ -152,6 +152,16 @@ impl Database {
         }
     }
 
+    /// List tasks with optional filters.
+    ///
+    /// - `include_done`: when `true`, done tasks are included even without a status_filter
+    /// - `status_filter`: exact status match (overrides include_done)
+    /// - `priority_filter`: exact priority match
+    /// - `tag_filter`: task must contain this tag
+    /// - `parent_filter`: task must have this parent_id
+    /// - `search`: case-insensitive substring match on title
+    /// - `completed_after`: RFC3339 timestamp; when `Some`, only tasks with `updated_at > ts` are returned
+    #[allow(clippy::too_many_arguments)]
     pub fn list_tasks(
         &self,
         include_done: bool,
@@ -160,6 +170,7 @@ impl Database {
         tag_filter: Option<&str>,
         parent_filter: Option<&str>,
         search: Option<&str>,
+        completed_after: Option<&str>,
     ) -> Result<Vec<Task>, String> {
         let mut sql = String::from(
             "SELECT id, title, description, status, priority, assignee, parent_id, tags, created_at, updated_at, close_reason, notes FROM tasks WHERE 1=1",
@@ -202,6 +213,12 @@ impl Database {
                 " AND title LIKE '%' || ?{param_idx} || '%' COLLATE NOCASE"
             ));
             param_values.push(Box::new(s.to_string()));
+            param_idx += 1;
+        }
+
+        if let Some(ts) = completed_after {
+            sql.push_str(&format!(" AND updated_at > ?{param_idx}"));
+            param_values.push(Box::new(ts.to_string()));
             let _ = param_idx; // suppress unused warning after last param
         }
 
@@ -1253,5 +1270,55 @@ mod tests {
         let ids: Vec<&str> = both.iter().map(|(t, _)| t.id.as_str()).collect();
         assert!(ids.contains(&a.id.as_str()));
         assert!(ids.contains(&c.id.as_str()));
+    }
+
+    #[test]
+    fn test_list_tasks_completed_after_none_returns_all() {
+        // completed_after = None should not change results vs. the baseline query
+        let (db, _dir) = open_test_db();
+        let a = make_task(&db, "Task A");
+        let b = make_task(&db, "Task B");
+
+        let all = db
+            .list_tasks(true, None, None, None, None, None, None)
+            .expect("list_tasks with no filter");
+
+        let ids: Vec<&str> = all.iter().map(|t| t.id.as_str()).collect();
+        assert!(ids.contains(&a.id.as_str()), "Task A should be returned");
+        assert!(ids.contains(&b.id.as_str()), "Task B should be returned");
+    }
+
+    #[test]
+    fn test_list_tasks_completed_after_filters_by_updated_at() {
+        // Only tasks with updated_at > completed_after should be returned
+        let (db, _dir) = open_test_db();
+
+        // Insert a task and immediately close it (sets updated_at to now)
+        let task = make_task(&db, "Recent Done Task");
+        db.update_task(&task.id, None, None, Some("done"), None, None, None, None)
+            .expect("close task");
+
+        // A timestamp well in the past — the task updated_at should be after this
+        let past_ts = "2000-01-01T00:00:00+00:00";
+        // A timestamp well in the future — the task updated_at should be before this
+        let future_ts = "2099-01-01T00:00:00+00:00";
+
+        let after_past = db
+            .list_tasks(true, Some("done"), None, None, None, None, Some(past_ts))
+            .expect("list_tasks completed_after past");
+        let ids_past: Vec<&str> = after_past.iter().map(|t| t.id.as_str()).collect();
+        assert!(
+            ids_past.contains(&task.id.as_str()),
+            "done task should be returned when completed_after is in the past"
+        );
+
+        let after_future = db
+            .list_tasks(true, Some("done"), None, None, None, None, Some(future_ts))
+            .expect("list_tasks completed_after future");
+        let ids_future: Vec<&str> = after_future.iter().map(|t| t.id.as_str()).collect();
+        assert!(
+            !ids_future.contains(&task.id.as_str()),
+            "done task should NOT be returned when completed_after is in the future"
+        );
     }
 }

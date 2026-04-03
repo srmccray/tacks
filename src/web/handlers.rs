@@ -299,6 +299,7 @@ pub async fn api_list_tasks(
             db_tag_filter.as_deref(),
             parent_filter.as_deref(),
             search_filter.as_deref(),
+            None,
         )?;
         // Post-filter for multi-value OR semantics
         if status_values.len() > 1 {
@@ -645,7 +646,7 @@ pub async fn api_epics(State(state): State<AppState>) -> Result<impl IntoRespons
     let result: Vec<EpicProgress> =
         tokio::task::spawn_blocking(move || -> Result<Vec<EpicProgress>, String> {
             let db = db.lock().unwrap();
-            let epics = db.list_tasks(true, None, None, Some("epic"), None, None)?;
+            let epics = db.list_tasks(true, None, None, Some("epic"), None, None, None)?;
             let mut out = Vec::with_capacity(epics.len());
             for epic in epics {
                 let children = db.get_children(&epic.id)?;
@@ -715,7 +716,8 @@ pub async fn api_prime(State(state): State<AppState>) -> Result<impl IntoRespons
             by_tag,
         };
 
-        let in_progress = db.list_tasks(false, Some("in_progress"), None, None, None, None)?;
+        let in_progress =
+            db.list_tasks(false, Some("in_progress"), None, None, None, None, None)?;
         let ready = db.get_ready_tasks(Some(5))?;
 
         Ok(PrimeResponse {
@@ -1110,6 +1112,7 @@ pub async fn task_list(
                 db_tag_filter.as_deref(),
                 None,
                 search_filter.as_deref(),
+                None,
             )?;
             // Post-filter for multi-value OR semantics
             if status_values.len() > 1 {
@@ -1187,7 +1190,7 @@ pub async fn task_create_modal(State(state): State<AppState>) -> Response {
     let db = state.db.clone();
     let result = tokio::task::spawn_blocking(move || -> Result<Vec<Task>, String> {
         let db = db.lock().unwrap();
-        db.list_tasks(true, None, None, Some("epic"), None, None)
+        db.list_tasks(true, None, None, Some("epic"), None, None, None)
     })
     .await;
 
@@ -1388,7 +1391,7 @@ pub async fn board(State(state): State<AppState>, Query(query): Query<BoardQuery
         let db = db.lock().unwrap();
 
         // Fetch all epics for the dropdown.
-        let epics = db.list_tasks(true, None, None, Some("epic"), None, None)?;
+        let epics = db.list_tasks(true, None, None, Some("epic"), None, None, None)?;
 
         // Parse multi-select values.
         let epic_values = parse_status_values(&epic_filter); // epic IDs are strings
@@ -1406,7 +1409,15 @@ pub async fn board(State(state): State<AppState>, Query(query): Query<BoardQuery
                 (_, 1) => (None, priority_values.first().copied()),
                 _ => (None, None),
             };
-            db.list_tasks(show_done, Some(status), db_priority, None, db_parent, None)
+            db.list_tasks(
+                show_done,
+                Some(status),
+                db_priority,
+                None,
+                db_parent,
+                None,
+                None,
+            )
         };
 
         // Fetch the set of task IDs that have at least one open blocker (via dep graph).
@@ -1519,7 +1530,7 @@ pub async fn epics(State(state): State<AppState>, Query(query): Query<EpicsQuery
     let db = state.db.clone();
     let result = tokio::task::spawn_blocking(move || -> Result<Vec<EpicRow>, String> {
         let db = db.lock().unwrap();
-        let epic_tasks = db.list_tasks(true, None, None, Some("epic"), None, None)?;
+        let epic_tasks = db.list_tasks(true, None, None, Some("epic"), None, None, None)?;
         let mut rows = Vec::with_capacity(epic_tasks.len());
         for task in epic_tasks {
             let children = db.get_children(&task.id)?;

@@ -11,7 +11,7 @@ pub fn run(db_path: &Path, json: bool) -> Result<(), String> {
 
     // Get all tasks tagged as epic
     // Always show all epics (including done) since epic progress is the focus
-    let epics = db.list_tasks(true, None, None, Some("epic"), None, None)?;
+    let epics = db.list_tasks(true, None, None, Some("epic"), None, None, None)?;
 
     if json {
         let mut results = Vec::new();
