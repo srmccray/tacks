@@ -6,6 +6,7 @@ pub mod create;
 pub mod dep;
 pub mod epic;
 pub mod init;
+pub mod init_rules;
 pub mod list;
 pub mod prime;
 pub mod ready;

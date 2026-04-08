@@ -11,11 +11,11 @@ Feature: Board done column filtering by done_since
   # Main board — GET /board
   # ---------------------------------------------------------------------------
 
-  Scenario: Default filter hides done tasks older than 7 days
+  Scenario: Default filter hides done tasks older than 3 days
     Given I created a task via API with title "Recent task" as "recent"
     And I created a task via API with title "Old task" as "old"
     And I closed the API task "recent"
-    And I closed the API task "old" 8 days ago
+    And I closed the API task "old" 4 days ago
     When I GET "/board"
     Then the response status is 200
     And the response body contains "Recent task"
@@ -42,19 +42,19 @@ Feature: Board done column filtering by done_since
     Then the response status is 200
     And the response body contains "Very old task"
 
-  Scenario: done_since=14d shows task closed 8 days ago
-    Given I created a task via API with title "Two-week-window task" as "biweekly"
-    And I closed the API task "biweekly" 8 days ago
-    When I GET "/board?done_since=14d"
+  Scenario: done_since=3d shows task closed 2 days ago
+    Given I created a task via API with title "Three-day-window task" as "threeday"
+    And I closed the API task "threeday" 2 days ago
+    When I GET "/board?done_since=3d"
     Then the response status is 200
-    And the response body contains "Two-week-window task"
+    And the response body contains "Three-day-window task"
 
-  Scenario: done_since=14d hides task closed 15 days ago
-    Given I created a task via API with title "Older than 14 days" as "old-14"
-    And I closed the API task "old-14" 15 days ago
-    When I GET "/board?done_since=14d"
+  Scenario: done_since=3d hides task closed 8 days ago
+    Given I created a task via API with title "Older than 3 days" as "old-3"
+    And I closed the API task "old-3" 8 days ago
+    When I GET "/board?done_since=3d"
     Then the response status is 200
-    And the response body does not contain "Older than 14 days"
+    And the response body does not contain "Older than 3 days"
 
   Scenario: done_since=30d shows task closed 20 days ago
     Given I created a task via API with title "Month window task" as "monthly"
@@ -73,13 +73,13 @@ Feature: Board done column filtering by done_since
   # Epic board — GET /epics/:id?view=board
   # ---------------------------------------------------------------------------
 
-  Scenario: Default filter on epic board hides old done subtask
+  Scenario: Default filter on epic board shows all done subtasks regardless of age
     Given I created a task via API with title "My epic" as "epic"
     And I created a subtask via API with title "Old subtask" under "epic" as "old-sub"
     And I closed the API task "old-sub" 8 days ago
     When I GET the epic board for "epic"
     Then the response status is 200
-    And the response body does not contain "Old subtask"
+    And the response body contains "Old subtask"
 
   Scenario: done_since=all on epic board shows old done subtask
     Given I created a task via API with title "Full epic" as "full-epic"

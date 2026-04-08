@@ -117,7 +117,7 @@
   min-height: calc(var(--pico-form-element-spacing-vertical, 0.75rem) * 2 + var(--pico-line-height, 1.5) * 1rem + 2px);
   box-sizing: border-box;
   border: 1px solid var(--pico-form-element-border-color, #767676);
-  border-radius: var(--pico-border-radius, 0.25rem);
+  border-radius: 0.5rem;
   padding: var(--pico-form-element-spacing-vertical, 0.75rem) 0.6em;
   background-color: var(--pico-form-element-background-color, #fff);
   cursor: pointer;
@@ -741,7 +741,7 @@ a.view-toggle-btn:hover {
   min-height: calc(var(--pico-form-element-spacing-vertical, 0.75rem) * 2 + var(--pico-line-height, 1.5) * 1rem + 2px);
   box-sizing: border-box;
   border: 1px solid var(--pico-form-element-border-color, #767676);
-  border-radius: var(--pico-border-radius, 0.25rem);
+  border-radius: 0.5rem;
   padding: var(--pico-form-element-spacing-vertical, 0.75rem) 0.6em;
   background-color: var(--pico-form-element-background-color, #fff);
   cursor: pointer;
@@ -858,6 +858,19 @@ a.view-toggle-btn:hover {
 
 [data-theme="dark"] .filter-multiselect-dropdown li[aria-selected="true"]::before {
   color: var(--pico-primary, #a78bfa);
+}
+
+/* --- Filter single-select widget overrides --- */
+
+/* Hide the pills wrapper — single-select uses placeholder text only */
+.filter-singleselect .filter-multiselect-pills {
+  display: none;
+}
+
+/* Placeholder is always visible and shows the selected label */
+.filter-singleselect .filter-multiselect-placeholder {
+  color: inherit;
+  font-size: 0.95em;
 }
 
 /* Priority badges — dark theme */
@@ -1110,6 +1123,12 @@ td[data-editable]:not(.editing) {
 /* Filter bar: bottom-align controls so selects match multiselect trigger height. */
 form .grid {
   align-items: end;
+}
+
+/* Pill-rounded right edge on the last filter trigger to match Pico's search input styling */
+form .grid > .filter-multiselect:last-of-type .filter-multiselect-trigger,
+form .grid > .tag-multiselect:last-of-type .tag-multiselect-trigger {
+  border-radius: 0.5rem 100px 100px 0.5rem;
 }
 
 /* Strip Pico's default bottom margin on form controls inside the filter bar

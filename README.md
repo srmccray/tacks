@@ -63,6 +63,7 @@ tk close <id> -c "Done"              # close with comment
 | `tk blocked` | List tasks blocked by open dependencies |
 | `tk stats` | Backlog overview (`--oneline` for compact output) |
 | `tk prime` | AI context output: stats + in-progress + ready queue |
+| `tk init-rules` | Install Claude Code rules file (`--global` for all projects) |
 | `tk serve` | Start web UI server (`--port` to set port, default 3000) |
 
 All commands support `--json` for machine-readable output.
@@ -137,6 +138,7 @@ claude --plugin-dir ./claude-plugin
 
 Tacks is built to be consumed by AI coding agents like Claude Code:
 
+- **`tk init-rules`** installs a Claude Code rules file that teaches Claude how to use `tk` — command reference, workflow, and conventions. Use `--global` to install for all projects.
 - **`tk prime --json`** gives agents a snapshot of project state: what's in progress, what's ready, backlog stats
 - **`tk ready --limit 1`** picks the next task for an agent to work on
 - **`--json` on every command** means agents can parse output reliably

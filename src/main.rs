@@ -163,6 +163,12 @@ enum Commands {
         #[arg(short, long, default_value_t = 3000)]
         port: u16,
     },
+    /// Install Claude Code rules for working with tacks
+    InitRules {
+        /// Install to global ~/.claude/rules/ instead of project .claude/rules/
+        #[arg(long)]
+        global: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -277,6 +283,13 @@ fn main() {
         },
         Commands::Comment { id, body } => commands::comment::run(&db_path, &id, &body, cli.json),
         Commands::Blocked => commands::blocked::run(&db_path, cli.json),
+        Commands::InitRules { global } => {
+            if let Err(e) = commands::init_rules::run(global) {
+                eprintln!("error: {e}");
+                std::process::exit(1);
+            }
+            return;
+        }
         Commands::Serve { port } => {
             let rt = tokio::runtime::Runtime::new()
                 .map_err(|e| format!("failed to create tokio runtime: {e}"))

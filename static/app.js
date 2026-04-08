@@ -427,8 +427,23 @@
   });
 
   // Pause HTMX polling swaps while inline editing or dragging is active
+  // Track in-flight filter requests to suppress stale polling swaps
+  var filterRequestInFlight = false;
+  document.addEventListener('htmx:beforeRequest', function (e) {
+    var elt = e.detail.elt;
+    if (elt && (elt.closest('form') || elt.name === 'done_since')) {
+      filterRequestInFlight = true;
+    }
+  });
+  document.addEventListener('htmx:afterRequest', function (e) {
+    var elt = e.detail.elt;
+    if (elt && (elt.closest('form') || elt.name === 'done_since')) {
+      filterRequestInFlight = false;
+    }
+  });
+
   document.addEventListener('htmx:beforeSwap', function (e) {
-    // Guard board-columns polling swaps when dragging or done column is collapsed
+    // Guard board-columns polling swaps when dragging, done column collapsed, dropdown open, or filter request in-flight
     if (e.detail.target && e.detail.target.id === 'board-columns') {
       if (document.querySelector('.board-card.dragging')) {
         e.detail.shouldSwap = false;
@@ -438,11 +453,20 @@
         e.detail.shouldSwap = false;
         return;
       }
+      if (document.querySelector('.filter-multiselect-dropdown:not([hidden])')) {
+        e.detail.shouldSwap = false;
+        return;
+      }
+      if (filterRequestInFlight) {
+        e.detail.shouldSwap = false;
+        return;
+      }
     }
-    // Guard content-area polling swaps (epics list, epic detail) when inline editing
-    if (e.detail.target && e.detail.target.id === 'content-area') {
+    // Guard content-area/content-inner polling swaps when inline editing or dropdown open
+    if (e.detail.target && (e.detail.target.id === 'content-area' || e.detail.target.id === 'content-inner')) {
       var editing = document.querySelector('[data-editable].editing');
-      if (editing) {
+      var dropdownOpen = document.querySelector('.filter-multiselect-dropdown:not([hidden])');
+      if (editing || dropdownOpen) {
         e.detail.shouldSwap = false;
         return;
       }
@@ -974,12 +998,195 @@
     render();
   }
 
+  // --- Filter single-select widget ---
+
+  /**
+   * Initialize a filter single-select widget (done_since filter).
+   *
+   * @param {HTMLElement} container - The `.filter-singleselect` element.
+   *
+   * Like filter-multiselect but only one option can be selected at a time.
+   * Selecting a new option deselects the previous one. The trigger shows the
+   * selected option's label as placeholder text. The hidden input value is updated
+   * and a `change` event is dispatched so HTMX triggers fire.
+   */
+  function initFilterSingleSelect(container) {
+    if (!container || container._ssInitialized) return;
+    container._ssInitialized = true;
+
+    var trigger = container.querySelector('.filter-multiselect-trigger');
+    var dropdown = container.querySelector('.filter-multiselect-dropdown');
+    var placeholder = container.querySelector('.filter-multiselect-placeholder');
+    var hiddenInput = container.querySelector('input[type="hidden"]');
+    var items = Array.from(container.querySelectorAll('.filter-multiselect-dropdown li[role="option"]'));
+
+    if (!trigger || !dropdown || !placeholder || !hiddenInput) return;
+
+    // --- State ---
+
+    function getSelected() {
+      return hiddenInput.value || '';
+    }
+
+    var selected = getSelected();
+
+    // --- Rendering ---
+
+    function render() {
+      // Update aria-selected on each option
+      items.forEach(function (li) {
+        var v = li.getAttribute('data-value');
+        li.setAttribute('aria-selected', v === selected ? 'true' : 'false');
+      });
+
+      // Update placeholder label to show selected option's label
+      var selectedItem = items.find(function (li) { return li.getAttribute('data-value') === selected; });
+      var fallbackLabel = items.length > 0 ? (items[0].getAttribute('data-label') || items[0].getAttribute('data-value') || '') : '';
+      placeholder.textContent = selectedItem
+        ? (selectedItem.getAttribute('data-label') || selected)
+        : fallbackLabel;
+      placeholder.style.display = '';
+
+      // Update hidden input and notify HTMX
+      if (hiddenInput.value !== selected) {
+        hiddenInput.value = selected;
+        hiddenInput.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }
+
+    // --- Select a value (single: replaces previous) ---
+
+    function selectValue(value) {
+      selected = value;
+      render();
+    }
+
+    // --- Dropdown open/close ---
+
+    function openDropdown() {
+      dropdown.removeAttribute('hidden');
+      trigger.setAttribute('aria-expanded', 'true');
+      items.forEach(function (li) { li.setAttribute('tabindex', '-1'); });
+    }
+
+    function closeDropdown() {
+      dropdown.setAttribute('hidden', '');
+      trigger.setAttribute('aria-expanded', 'false');
+    }
+
+    function closeDropdownAndFocusTrigger() {
+      closeDropdown();
+      trigger.focus();
+    }
+
+    function isOpen() {
+      return !dropdown.hasAttribute('hidden');
+    }
+
+    function focusItem(index) {
+      if (items.length === 0) return;
+      var clamped = Math.max(0, Math.min(index, items.length - 1));
+      items[clamped].focus();
+    }
+
+    function getFocusedItemIndex() {
+      return items.indexOf(document.activeElement);
+    }
+
+    // Trigger click: toggle dropdown
+    trigger.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (isOpen()) {
+        closeDropdown();
+      } else {
+        openDropdown();
+      }
+    });
+
+    // Keyboard on trigger
+    trigger.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (!isOpen()) openDropdown();
+        focusItem(0);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (!isOpen()) openDropdown();
+        focusItem(items.length - 1);
+      } else if (e.key === 'Escape') {
+        closeDropdownAndFocusTrigger();
+      } else if (e.key === 'Tab') {
+        closeDropdown();
+      }
+    });
+
+    // Prevent trigger blur before click fires
+    dropdown.addEventListener('mousedown', function (e) {
+      e.preventDefault();
+    });
+
+    items.forEach(function (li) {
+      li.setAttribute('role', 'option');
+
+      li.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var value = li.getAttribute('data-value');
+        if (value) {
+          selectValue(value);
+          closeDropdown();
+        }
+      });
+
+      li.addEventListener('keydown', function (e) {
+        var idx = getFocusedItemIndex();
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          focusItem(idx + 1);
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          if (idx <= 0) {
+            closeDropdownAndFocusTrigger();
+          } else {
+            focusItem(idx - 1);
+          }
+        } else if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          var value = li.getAttribute('data-value');
+          if (value) {
+            selectValue(value);
+            closeDropdown();
+          }
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          closeDropdownAndFocusTrigger();
+        } else if (e.key === 'Tab') {
+          closeDropdown();
+        }
+      });
+    });
+
+    // Close when clicking outside
+    document.addEventListener('click', function (e) {
+      if (!container.contains(e.target)) {
+        closeDropdown();
+      }
+    });
+
+    // Initial render (reflects pre-selected value from hidden input / URL params)
+    render();
+  }
+
   function initAllFilterMultiSelects() {
-    var containers = document.querySelectorAll('.filter-multiselect');
+    var containers = document.querySelectorAll('.filter-multiselect:not(.filter-singleselect)');
     containers.forEach(function (c) {
       // Reset init flag on re-init so we recreate state from current DOM/URL
       c._msInitialized = false;
       initFilterMultiSelect(c);
+    });
+    var singleContainers = document.querySelectorAll('.filter-singleselect');
+    singleContainers.forEach(function (c) {
+      c._ssInitialized = false;
+      initFilterSingleSelect(c);
     });
   }
 

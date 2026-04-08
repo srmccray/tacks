@@ -38,12 +38,19 @@
       </ul>
       <input type="hidden" name="priority" id="board-priority-hidden-input" value="{{ selected_priority }}">
     </div>
-    <select name="done_since" id="board-done-since-select" aria-label="Filter done tasks by time range">
-      <option value="7d" {% if done_since == "7d" %}selected{% endif %}>Done: last 7 days</option>
-      <option value="14d" {% if done_since == "14d" %}selected{% endif %}>Done: last 14 days</option>
-      <option value="30d" {% if done_since == "30d" %}selected{% endif %}>Done: last 30 days</option>
-      <option value="all" {% if done_since == "all" %}selected{% endif %}>Done: all time</option>
-    </select>
+    <div class="filter-multiselect filter-singleselect" id="board-done-since-multiselect">
+      <div class="filter-multiselect-trigger" tabindex="0" aria-haspopup="listbox" aria-expanded="false" aria-label="Filter done tasks by time range">
+        <span class="filter-multiselect-pills"></span>
+        <span class="filter-multiselect-placeholder">{% if done_since == "3d" %}3 days{% elif done_since == "7d" %}7 days{% elif done_since == "30d" %}30 days{% elif done_since == "all" %}All time{% else %}3 days{% endif %}</span>
+      </div>
+      <ul class="filter-multiselect-dropdown" role="listbox" aria-multiselectable="false" hidden>
+        <li role="option" data-value="3d" data-label="3 days"><span>3 days</span></li>
+        <li role="option" data-value="7d" data-label="7 days"><span>7 days</span></li>
+        <li role="option" data-value="30d" data-label="30 days"><span>30 days</span></li>
+        <li role="option" data-value="all" data-label="All time"><span>All time</span></li>
+      </ul>
+      <input type="hidden" name="done_since" id="board-done-since-select" value="{{ done_since }}">
+    </div>
     <noscript><button type="submit">Filter</button></noscript>
   </div>
 </form>

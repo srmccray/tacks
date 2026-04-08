@@ -948,7 +948,7 @@ struct BoardTemplate {
     selected_epic: String,
     /// Currently selected priority filter (empty string = none).
     selected_priority: String,
-    /// Currently selected done_since filter value (e.g. "7d", "14d", "30d", "all").
+    /// Currently selected done_since filter value (e.g. "3d", "7d", "30d", "all").
     done_since: String,
     /// Pre-built query string for HTMX polling (preserves current filters).
     poll_query: String,
@@ -963,7 +963,7 @@ pub struct BoardQuery {
     /// Comma-separated priority values for multi-select OR filtering (e.g. `priority=1,2`).
     #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub priority: Option<String>,
-    /// How far back to show completed tasks: "7d" (default), "14d", "30d", or "all".
+    /// How far back to show completed tasks: "3d" (default), "7d", "30d", or "all".
     #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub done_since: Option<String>,
 }
@@ -1021,7 +1021,7 @@ struct EpicDetailTemplate {
     board_done_count: usize,
     /// Current view mode: "list" (default) or "board".
     view: String,
-    /// Currently selected done_since filter value (e.g. "7d", "14d", "30d", "all").
+    /// Currently selected done_since filter value (e.g. "3d", "7d", "30d", "all").
     done_since: String,
     /// Pre-built query string for HTMX polling (preserves view + done_since).
     poll_query: String,
@@ -1033,7 +1033,7 @@ struct EpicDetailTemplate {
 #[derive(Debug, Deserialize)]
 pub struct EpicDetailQuery {
     pub view: Option<String>,
-    /// How far back to show completed tasks on the board: "7d" (default), "14d", "30d", or "all".
+    /// How far back to show completed tasks on the board: "3d" (default), "7d", "30d", or "all".
     #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub done_since: Option<String>,
 }
@@ -1381,26 +1381,28 @@ pub async fn task_detail(
 
 /// Parse a `done_since` query value into an RFC 3339 cutoff timestamp, or `None` for "all".
 ///
-/// Recognised values: `"7d"` (default/fallback), `"14d"`, `"30d"`, `"all"`.
+/// Recognised values: `"3d"`, `"7d"`, `"30d"`, `"all"`.
+/// Falls back to `"3d"` for unrecognised values; callers should resolve their view-specific
+/// default before calling (e.g. global board → "3d", epic board → "all").
 /// Returns `None` when the caller should not apply any date filter.
 fn parse_done_since(done_since: &Option<String>) -> Option<chrono::DateTime<chrono::Utc>> {
-    let value = done_since.as_deref().unwrap_or("7d");
+    let value = done_since.as_deref().unwrap_or("3d");
     let days: i64 = match value {
         "all" => return None,
-        "14d" => 14,
+        "7d" => 7,
         "30d" => 30,
-        _ => 7, // "7d" and any unrecognised value default to 7 days
+        _ => 3, // "3d" and any unrecognised value default to 3 days
     };
     Some(chrono::Utc::now() - chrono::Duration::days(days))
 }
 
 /// Normalise a `done_since` option to a canonical string value.
 fn done_since_label(done_since: &Option<String>) -> String {
-    match done_since.as_deref().unwrap_or("7d") {
-        "14d" => "14d".to_string(),
+    match done_since.as_deref().unwrap_or("3d") {
+        "7d" => "7d".to_string(),
         "30d" => "30d".to_string(),
         "all" => "all".to_string(),
-        _ => "7d".to_string(),
+        _ => "3d".to_string(),
     }
 }
 
@@ -1687,7 +1689,13 @@ pub async fn epic_detail(
         _ => "list".to_string(),
     };
     let view_clone = view.clone();
-    let done_since_param = query.done_since.clone();
+    // Epic board defaults to "all" (show all completed tasks); global board defaults to "7d".
+    let done_since_param = Some(
+        query
+            .done_since
+            .clone()
+            .unwrap_or_else(|| "all".to_string()),
+    );
 
     let db = state.db.clone();
     let result =
