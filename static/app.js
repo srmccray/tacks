@@ -428,9 +428,13 @@
 
   // Pause HTMX polling swaps while inline editing or dragging is active
   document.addEventListener('htmx:beforeSwap', function (e) {
-    // Guard board-columns polling swaps when dragging
+    // Guard board-columns polling swaps when dragging or done column is collapsed
     if (e.detail.target && e.detail.target.id === 'board-columns') {
       if (document.querySelector('.board-card.dragging')) {
+        e.detail.shouldSwap = false;
+        return;
+      }
+      if (localStorage.getItem('board-done-collapsed') === 'true') {
         e.detail.shouldSwap = false;
         return;
       }
