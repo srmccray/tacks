@@ -2197,7 +2197,7 @@ dependencies = [
 
 [[package]]
 name = "tacks"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "askama",
  "assert_cmd",
